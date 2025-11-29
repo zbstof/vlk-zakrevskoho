@@ -51,17 +51,50 @@
             // Format: DD.MM.YYYY
             const match = dateStr.match(/(\d{2})\.(\d{2})\.(\d{4})/);
             if (!match) return null;
-            return new Date(match[3], match[2] - 1, match[1]); // Y, M-1, D
+            
+            // Create date as UTC midnight to avoid timezone shifts
+            // new Date(Y, M-1, D) creates local time.
+            // If local time is behind UTC (e.g. GMT-5), converting to string/ordinal might shift day.
+            
+            // But here we use custom ordinal logic based on msPerDay.
+            // Let's ensure we work with "No Timezone" logic by using UTC methods or setting time to noon.
+            
+            // Safer: Set hour to 12:00 to avoid DST shifts affecting "midnight" logic
+            return new Date(match[3], match[2] - 1, match[1], 12, 0, 0); 
         }
 
+        // Anchor date: Monday, Jan 5, 1970
+        const ANCHOR_DATE = new Date(1970, 0, 5, 12, 0, 0); 
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
         function toOrdinal(date) {
-            const msPerDay = 24 * 60 * 60 * 1000;
-            return Math.floor(date.getTime() / msPerDay); // JS epoch days
+            // Calculate business days since anchor
+            const diffTime = date.getTime() - ANCHOR_DATE.getTime();
+            // Use round() instead of floor() to handle DST shifts (23h/25h days) safely
+            const totalDays = Math.round(diffTime / MS_PER_DAY);
+            
+            const weeks = Math.floor(totalDays / 7);
+            const days = totalDays % 7; // 0=Mon, ..., 4=Fri, 5=Sat, 6=Sun
+            
+            // Clamp Sat/Sun to 5 (start of next week / end of current week overlap)
+            // But simpler: just count 5 days per week.
+            // Mon(0)->0, Fri(4)->4, Sat(5)->5, Sun(6)->5, Mon(7)->5 (Wait, next Mon is 5)
+            
+            // Let's handle the case where totalDays might be negative (before 1970) just in case, 
+            // though unlikely for this dataset. Assuming post-1970.
+            
+            return weeks * 5 + Math.min(days, 5);
         }
 
         function fromOrdinal(ordinal) {
-            const msPerDay = 24 * 60 * 60 * 1000;
-            return new Date(ordinal * msPerDay);
+            // Convert business days back to calendar date
+            const weeks = Math.floor(ordinal / 5);
+            const days = ordinal % 5; // 0..4.999
+            
+            // 5 business days -> 7 calendar days
+            const totalDays = weeks * 7 + days;
+            
+            return new Date(ANCHOR_DATE.getTime() + totalDays * MS_PER_DAY);
         }
 
         // --- Regression Logic ---
@@ -198,7 +231,8 @@
 
             // Filter Pre-booked Data outliers (> 3 months from last historical date)
             const lastHistoricalDateOrdinal = validData[validData.length - 1].ordinal;
-            const cutoffOrdinal = lastHistoricalDateOrdinal + (90); // Approx 3 months (90 days)
+            // 3 months is approx 65 business days (21.6 working days/month * 3)
+            const cutoffOrdinal = lastHistoricalDateOrdinal + 65; 
             
             // Filter in place or create new array
             // We need to filter preBookedData which was passed in
@@ -311,21 +345,26 @@
             // Historical Points
             const histData = validData.map(d => ({ x: d.date, y: d.id }));
             
+            // Determine last historical date for filtering
+            const lastHistoricalDate = validData[validData.length - 1].date;
+            const lastHistoricalTime = lastHistoricalDate.getTime();
+
             // Pre-booked Points (From second sheet, filtered)
             const preBookedChartData = filteredPreBookedData.map(d => ({ x: d.date, y: d.id }));
 
+            // Helper to filter out points in the past (relative to history)
+            const filterFuture = (arr) => arr.filter(p => p.x.getTime() >= lastHistoricalTime);
+
             // Mean Line
-            const meanData = predPoints.map(p => ({ x: p.mean, y: p.id }));
+            const meanData = filterFuture(predPoints.map(p => ({ x: p.mean, y: p.id })));
             
-            // Confidence Intervals (Filled Areas)
-            // Chart.js 'fill' requires a boundary.
-            // We create two lines for each interval: Upper and Lower.
-            // We fill Upper to Lower.
+            // Confidence Intervals
+            // We filter them to ensure they don't show "past" predictions
             
-            const l95Data = predPoints.map(p => ({ x: p.l95, y: p.id }));
-            const h95Data = predPoints.map(p => ({ x: p.h95, y: p.id }));
-            const l50Data = predPoints.map(p => ({ x: p.l50, y: p.id }));
-            const h50Data = predPoints.map(p => ({ x: p.h50, y: p.id }));
+            const l95Data = filterFuture(predPoints.map(p => ({ x: p.l95, y: p.id })));
+            const h95Data = filterFuture(predPoints.map(p => ({ x: p.h95, y: p.id })));
+            const l50Data = filterFuture(predPoints.map(p => ({ x: p.l50, y: p.id })));
+            const h50Data = filterFuture(predPoints.map(p => ({ x: p.h50, y: p.id })));
 
             renderChart(histData, preBookedChartData, meanData, l95Data, h95Data, l50Data, h50Data);
         }
@@ -490,25 +529,19 @@
                             textLines.unshift(`${data.actualType}: ${formatDate(data.actualDate)}`);
                         }
                         
-                        // Box settings
+                        // Position box fixed at Top-Left of the chart area
+                        // This avoids obscuring recent data (usually at bottom-right or top-right)
                         const padding = 10;
                         const lineHeight = 20;
-                        const boxWidth = 220; // Increased width for potentially longer labels
+                        const boxWidth = 220; 
                         const boxHeight = textLines.length * lineHeight + padding * 2;
                         
-                        // Position box to the left of the point if possible
-                        // If actual date exists and is far from mean, we still position relative to Mean for consistency,
-                        // or maybe to the left of the leftmost line? Let's stick to Mean.
-                        
-                        let boxX = xPixMean - boxWidth - 20;
-                        let boxY = yPix - boxHeight / 2;
-                        
-                        // Clamp to chart area
-                        if (boxX < chart.chartArea.left) boxX = xPixMean + 20;
-                        if (boxY < chart.chartArea.top) boxY = chart.chartArea.top;
+                        // Fixed position: Top-Left corner of the chart area with a small margin
+                        let boxX = chart.chartArea.left + 20; 
+                        let boxY = chart.chartArea.top + 20;
                         
                         // Background
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; // Slightly more opaque for readability
                         ctx.strokeStyle = 'black';
                         ctx.setLineDash([]);
                         ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
@@ -544,6 +577,15 @@
                 }
             };
 
+            // Register custom tooltip positioner
+            Chart.Tooltip.positioners.topLeft = function(elements, eventPosition) {
+                const chart = this.chart;
+                return {
+                    x: chart.chartArea.left + 20,
+                    y: chart.chartArea.top + 20
+                };
+            };
+
             new Chart(ctx, {
                 type: 'scatter',
                 data: {
@@ -566,50 +608,44 @@
                             order: 0 // Topmost layer
                         },
                         {
-                            label: 'Прогноз (Середнє)',
+                            label: '95% Шанс',
+                            data: h95Data,
+                            borderColor: 'rgb(0, 255, 0)', // Bright Green
+                            borderWidth: 2,
+                            showLine: true,
+                            pointRadius: 0, // Hide points for lines
+                        },
+                        {
+                            label: '75% Шанс',
+                            data: h50Data,
+                            borderColor: 'rgba(0, 128, 0, 0.5)', // Dim Green
+                            borderWidth: 2,
+                            showLine: true,
+                            pointRadius: 0, // Hide points for lines
+                        },
+                        {
+                            label: 'Прогноз (50% Шанс)',
                             data: meanData,
                             borderColor: 'blue',
                             borderWidth: 2,
                             showLine: true,
                             pointRadius: 0, // Hide points for lines
-                            order: 2
-                        },
-                        // Confidence Intervals (Hidden from plot, but data kept for freeze tooltip)
-                        {
-                            label: '95% Верхня',
-                            data: h95Data,
-                            borderColor: 'transparent',
-                            pointRadius: 0,
-                            fill: false, 
-                            order: 3,
-                            hidden: true // Hide from legend and plot
                         },
                         {
-                            label: '95% Нижня',
-                            data: l95Data,
-                            borderColor: 'transparent',
-                            pointRadius: 0,
-                            fill: false, 
-                            order: 4,
-                            hidden: true // Hide from legend and plot
-                        },
-                        {
-                            label: '50% Верхня',
-                            data: h50Data,
-                            borderColor: 'transparent',
-                            pointRadius: 0,
-                            fill: false, 
-                            order: 5,
-                            hidden: true // Hide from legend and plot
-                        },
-                        {
-                            label: '50% Нижня',
+                            label: '25% Шанс',
                             data: l50Data,
-                            borderColor: 'transparent',
-                            pointRadius: 0,
-                            fill: false, 
-                            order: 6,
-                            hidden: true // Hide from legend and plot
+                            borderColor: 'rgba(139, 0, 0, 0.5)', // Dim Red
+                            borderWidth: 2,
+                            showLine: true,
+                            pointRadius: 0, // Hide points for lines
+                        },
+                        {
+                            label: '5% Шанс',
+                            data: l95Data,
+                            borderColor: 'red', // Red
+                            borderWidth: 2,
+                            showLine: true,
+                            pointRadius: 0, // Hide points for lines
                         }
                     ]
                 },
@@ -652,6 +688,7 @@
                             }
                         },
                         tooltip: {
+                            position: 'topLeft', // Use our custom positioner
                             mode: 'nearest',
                             axis: 'y',
                             intersect: false,
@@ -665,7 +702,7 @@
                                 },
                                 label: function(context) {
                                     // Custom tooltip formatting if needed
-                                    if (context.dataset.label === 'Історичні дані' || context.dataset.label === 'Попередньо записані') {
+                                    if (context.dataset.label === 'Історичні дані') {
                                         return `ID: ${context.raw.y}, Дата: ${context.raw.x.toISOString().split('T')[0]}`;
                                     }
                                     // Use YYYY-MM-DD format
@@ -681,7 +718,27 @@
                         intersect: false
                     }
                 },
-                plugins: [freezePlugin]
+                plugins: [{
+                    id: 'cursorLine',
+                    afterDraw: (chart) => {
+                        if (chart.tooltip?._active?.length) {
+                            const activePoint = chart.tooltip._active[0];
+                            const ctx = chart.ctx;
+                            const y = activePoint.element.y;
+                            const left = chart.chartArea.left;
+                            const right = chart.chartArea.right;
+
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.moveTo(left, y);
+                            ctx.lineTo(right, y);
+                            ctx.lineWidth = 1;
+                            ctx.strokeStyle = 'red';
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    }
+                }, freezePlugin]
             });
         }
     </script>
