@@ -2302,6 +2302,7 @@ def main() -> None:
         callback=notify_status,
         interval=datetime.timedelta(minutes=5),
         first=datetime.time(hour=7, minute=3, tzinfo=kyiv_tz), # Перший запуск о 7:00
+        last=datetime.time(hour=23, minute=33, tzinfo=kyiv_tz), # Останній запуск о 23:30
         name="Status Change Notification"
     )
     logger.info(f"Завдання 'Status Change Notification' заплановано кожні 30 хвилин з 07:00 по 23:30 за {kyiv_tz.tzname(datetime.datetime.now())}")
