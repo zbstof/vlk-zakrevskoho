@@ -769,18 +769,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.chat.type == 'private':
         user = update.effective_user
         logger.info(f"Користувач {get_user_log_info(user)} розпочав розмову.")
-        await update.message.reply_html(
+        
+        caption_text = (
             f"Вітаю, {user.mention_html()}\n"
             "Я бот для запису в електронну чергу ВЛК на Закревського, 81/1\n"
-            "Обирайте потрібну команду за допомогою кнопок:\n"
-            "<code>Записатися / Перенести</code> - записатися або перенести дату відвідання\n"
-            "<code>Скасувати запис</code> - скасувати свій запис\n"
-            "<code>Переглянути чергу</code> - переглянути поточну чергу повністю або на обраний день\n"
-            "<code>Відкрити таблицю</code> - перейти до таблиці Google Sheets з даними черги (тільки для адміністраторів)\n"
+            "1. Ознайомтеся з інфографікою 👆\n"
+            "2. Оберайте потрібну команду за допомогою кнопок:\n"
+            "* <code>Записатися / Перенести</code> - записатися або перенести дату відвідання\n"
+            "* <code>Скасувати запис</code> - скасувати свій запис\n"
+            "* <code>Переглянути чергу</code> - переглянути поточну чергу повністю або на обраний день\n"
+            "* <code>Відкрити таблицю</code> - перейти до таблиці Google Sheets з даними черги (тільки для адміністраторів)\n"
             #"<code>Очистити чергу</code> - очистити чергу (тільки для адміністраторів)\n"
-            "<code>Скасувати ввід</code> - скасувати ввід під час діалогу",
-            reply_markup=MAIN_KEYBOARD, # Додаємо клавіатуру
+            "* <code>Скасувати ввід</code> - скасувати ввід під час діалогу"
         )
+
+        try:
+            with open('infographic.jpg', 'rb') as photo:
+                await update.message.reply_photo(
+                    photo=photo,
+                    caption=caption_text,
+                    parse_mode='HTML',
+                    reply_markup=MAIN_KEYBOARD
+                )
+        except Exception as e:
+            logger.error(f"Не вдалося надіслати фото (infographic.jpg): {e}")
+            # Fallback to text only if image fails
+            await update.message.reply_html(
+                caption_text,
+                reply_markup=MAIN_KEYBOARD,
+            )
 
     # Функція, яка містить основну логіку очищення
 async def perform_queue_cleanup(logger_info_prefix: str = "Очищення за розкладом"):
@@ -1448,7 +1465,7 @@ async def join_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                         range_info = f"`{prediction['mean'].strftime('%d.%m.%Y')}` - `{prediction['h90'].strftime('%d.%m.%Y')}`"
 
                     warn_msg = (
-                        f"⚠️ *Попередження:* Для обраної дати `{chosen_date.strftime('%d.%m.%Y')}` ви маєте *низьку ймовірність* почати ВЛК ({chosen_prob:.1f}%).\n"
+                        f"⚠️ *Попередження:* Для обраної дати `{chosen_date.strftime('%d.%m.%Y')}` ви маєте *низьку ймовірність* почати ВЛК ({chosen_prob:.0f}%).\n"
                         f"Рекомендовано обирати дату з інтервалу {range_info}."
                     )
             elif chosen_date > prediction['h90']:
@@ -1476,7 +1493,7 @@ async def join_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
                     try:
                         example_prob = calculate_date_probability(example_date, dist)
-                        example_prob_str = f"{example_prob:.1f}%"
+                        example_prob_str = f"{example_prob:.0f}%"
                     except Exception as e:
                             example_prob_str = ""
 
@@ -1737,6 +1754,22 @@ async def status_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if is_actual_record:
         status_message += f"**Дата запису:** `{latest_record['Дата']}`\n"
         status_message += f"**Поточний статус:** `{latest_record['Статус'] if latest_record['Статус'].strip() else 'Невизначений'}`\n"
+        
+        # Розрахунок ймовірності
+        try:
+            stats_df = await get_stats_data()
+            if stats_df is not None and not stats_df.empty:
+                main_id = extract_main_id(latest_record['ID'])
+                prediction = calculate_prediction(main_id, stats_df)
+                
+                if prediction:
+                    record_date = datetime.datetime.strptime(latest_record['Дата'], "%d.%m.%Y").date()
+                    dist = prediction['dist']
+                    prob = calculate_date_probability(record_date, dist)
+                    status_message += f"*Орієнтовна ймовірність зайти в 252 кабінет і розпочати ВЛК:* `{prob:.0f}%`\n"
+        except Exception as e:
+             logger.error(f"Помилка при розрахунку ймовірності в status_get_id: {e}")
+
         if latest_record['Попередня дата'].strip():
             status_message += f"**Перенесено з дати:** `{latest_record['Попередня дата']}`\n"
     else:
