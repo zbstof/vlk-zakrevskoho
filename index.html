@@ -6,8 +6,6 @@
     <title>Прогноз черги ВЛК</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns/locale/uk/index.js"></script> 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.6/jstat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
@@ -38,28 +36,46 @@
         Примітка: Попередні записи на дати, що віддалені більш ніж на 3 місяці від поточної дати, на графіку не відображаються.
     </div>
 
-    <script>
+    <script type="module">
+        import { parse } from 'https://cdn.jsdelivr.net/npm/csv-parse@5.5.3/+esm';
+        
         // Google Sheet CSV URL
         const SHEET_ID = '1d9OG-0b7wxxqrOujC9v6ikhjMKL2ei3wfrfaG61zSjA';
-        const GID = '822507513';
-        const HISTORICAL_DATA_GID = '84071606';
+        const STATS_SHEET = '822507513';
+        const HISTORICAL_DATA_SHEET = '84071606';
         
-        const rawCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
-        const rawMaxIdUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${HISTORICAL_DATA_GID}`;
+        const statsUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${STATS_SHEET}`;
+        const historicalDataUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${HISTORICAL_DATA_SHEET}`;
 
         const isLocalhost = window.location.hostname === 'localhost' || 
                             window.location.hostname === '127.0.0.1' ||
                             window.location.protocol === 'file:';
 
-        // Use a CORS proxy to handle redirects and CORS headers only for localhost or local file access
-        const CSV_URL = isLocalhost 
-            ? 'https://corsproxy.io/?' + encodeURIComponent(rawCsvUrl) 
-            : rawCsvUrl;
-        const MAX_ID_URL = isLocalhost 
-            ? 'https://corsproxy.io/?' + encodeURIComponent(rawMaxIdUrl) 
-            : rawMaxIdUrl;
+        const STATS_URL = isLocalhost 
+            ? 'https://corsproxy.io/?' + encodeURIComponent(statsUrl) 
+            : statsUrl;
+        const HISTORICAL_DATA_URL = isLocalhost 
+            ? 'https://corsproxy.io/?' + encodeURIComponent(historicalDataUrl) 
+            : historicalDataUrl;
 
         // --- Helper Functions ---
+        function fetchAndParse(url) {
+            return fetch(url)
+                .then(response => response.text())
+                .then(csvText => {
+                    return new Promise((resolve, reject) => {
+                        const options = url.includes(HISTORICAL_DATA_SHEET)
+                            ? { columns: true, skip_empty_lines: true, from_line: 3 }
+                            // url.includes(STATS_SHEET)
+                            : { columns: true, skip_empty_lines: true };
+                        
+                        parse(csvText, options, (err, records) => {
+                            if (err) reject(err);
+                            else resolve(records);
+                        });
+                    });
+                });
+        }
 
         function parseDate(dateStr) {
             // Format: DD.MM.YYYY
@@ -142,26 +158,12 @@
         // --- Data Processing & Charting ---
 
         Promise.all([
-            new Promise((resolve, reject) => {
-                Papa.parse(CSV_URL, {
-                    download: true,
-                    header: true,
-                    complete: results => resolve(results.data),
-                    error: err => reject(err)
-                });
-            }),
-            new Promise((resolve, reject) => {
-                Papa.parse(MAX_ID_URL, {
-                    download: true,
-                    header: false, // Column B is just data, maybe no header or simple structure
-                    complete: results => resolve(results.data),
-                    error: err => reject(err)
-                });
-            })
-        ]).then(([queueData, maxIdData]) => {
+            fetchAndParse(STATS_URL),
+            fetchAndParse(HISTORICAL_DATA_URL)
+        ]).then(([statsData, historicalData]) => {
             document.getElementById('loading').style.display = 'none';
             try {
-                processAndRender(queueData, maxIdData);
+                processAndRender(statsData, historicalData);
             } catch (e) {
                 console.error(e);
                 document.getElementById('error').textContent = "Error: " + e.message;
@@ -171,39 +173,24 @@
             document.getElementById('error').textContent = "Failed to load data: " + err.message;
         });
 
-        function processAndRender(data, maxIdRows) {
-            // 0. Find Global Max ID from second sheet (Column B -> Index 1)
-            // Also extract "Pre-booked" data points (ID in Col B, Date in Col C)
-            
+        function processAndRender(data, historicalData) {
             let globalMaxId = 0;
             const preBookedData = [];
 
-            maxIdRows.forEach(row => {
-                // Skip header rows or empty rows
-                // Row structure based on CSV check: [No, ID, Date, Note, ...]
-                // We need ID (index 1) and Date (index 2)
-                // ID should be numeric.
+            historicalData.forEach(row => {
+                const idStr = String(row['ID'] || '').trim();
+                const dateStr = String(row['Дата'] || '').trim();
                 
-                if (Array.isArray(row) && row.length > 2) {
-                    const idStr = String(row[1]).trim();
-                    const dateStr = String(row[2]).trim();
-                    
-                    // Simple check if it looks like an ID
-                    // Filter out non-digits to be safe, but also ensure it's not a header like "ID"
-                    if (!/^\d+$/.test(idStr)) return; 
-                    
-                    const id = parseInt(idStr, 10);
-                    if (isNaN(id)) return;
+                if (!/^\d+$/.test(idStr)) return; 
+                
+                const id = parseInt(idStr, 10);
+                if (isNaN(id)) return;
 
-                    // Update Max ID
-                    if (id > globalMaxId) globalMaxId = id;
+                if (id > globalMaxId) globalMaxId = id;
 
-                    // Parse Date for Pre-booked plot
-                    // Format DD.MM.YYYY
-                    const date = parseDate(dateStr);
-                    if (date) {
-                        preBookedData.push({ id: id, date: date });
-                    }
+                const date = parseDate(dateStr);
+                if (date) {
+                    preBookedData.push({ id: id, date: date });
                 }
             });
             
