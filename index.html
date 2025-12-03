@@ -9,6 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/date-fns/locale/uk/index.js"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.6/jstat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
     <style>
         body { font-family: sans-serif; margin: 20px; }
         #loading { font-style: italic; color: #666; }
@@ -24,6 +26,7 @@
     <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
         <input type="number" id="queueInput" placeholder="Введіть номер черги" style="padding: 5px; width: 150px;">
         <button id="findBtn" style="padding: 5px 10px; cursor: pointer;">Показати прогноз</button>
+        <button id="resetZoomBtn" style="padding: 5px 10px; cursor: pointer;">Скинути зум</button>
         <span style="margin-left: auto; color: #555; font-style: italic;">👉 Натисніть на графік щоб побачити ймовірності початку ВЛК</span>
     </div>
 
@@ -452,6 +455,15 @@
                 afterInit: (chart) => {
                     chart.frozen = false;
                     
+                    // Track drag state to prevent click triggering on drag
+                    let startX = 0;
+                    let startY = 0;
+                    
+                    chart.canvas.addEventListener('pointerdown', (e) => {
+                        startX = e.clientX;
+                        startY = e.clientY;
+                    });
+
                     // Bind external input controls
                     const input = document.getElementById('queueInput');
                     const btn = document.getElementById('findBtn');
@@ -463,6 +475,10 @@
                         }
                     };
                     
+                    document.getElementById('resetZoomBtn').addEventListener('click', () => {
+                        chart.resetZoom();
+                    });
+
                     btn.addEventListener('click', handleSearch);
                     input.addEventListener('keypress', (e) => {
                         if (e.key === 'Enter') handleSearch();
@@ -482,6 +498,10 @@
                     
                     // Handle click to freeze/unfreeze
                     chart.canvas.addEventListener('click', (e) => {
+                        // Check distance
+                        const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+                        if (dist > 10) return; // Ignore drags > 10px
+
                         if (chart.frozen) {
                             // Unfreeze
                             chart.frozen = false;
@@ -722,6 +742,23 @@
                                     const text = item.text || '';
                                     return !text.includes('%'); 
                                 }
+                            }
+                        },
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'xy',
+                                threshold: 10,
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                    speed: 0.05, // Default is 0.1, lowering to make it less sensitive
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'xy',
                             }
                         },
                         tooltip: {

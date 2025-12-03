@@ -3,3 +3,4 @@ service_account_key.json
 *.pyc
 __pycache__/
 .pytest_cache/
+status.json
