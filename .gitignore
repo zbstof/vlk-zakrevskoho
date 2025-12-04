@@ -4,3 +4,4 @@ service_account_key.json
 __pycache__/
 .pytest_cache/
 status.json
+.idea

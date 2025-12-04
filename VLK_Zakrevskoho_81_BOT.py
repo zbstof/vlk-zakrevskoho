@@ -493,6 +493,7 @@ BUTTON_TEXT_JOIN = "Записатися / Перенести"
 BUTTON_TEXT_SHOW = "Переглянути чергу"
 BUTTON_TEXT_CANCEL_RECORD = "Скасувати запис"
 BUTTON_TEXT_OPEN_SHEET = "Відкрити таблицю"
+BUTTON_TEXT_PREDICTION = "Прогноз черги"
 #BUTTON_TEXT_CLEAR_QUEUE = "Очистити чергу"
 BUTTON_TEXT_CANCEL_OP = "Скасувати ввід" # Для відміни поточної дії
 BUTTON_TEXT_STATUS = "Переглянути статус"
@@ -509,6 +510,8 @@ button_show = KeyboardButton(BUTTON_TEXT_SHOW)
 button_cancel_record = KeyboardButton(BUTTON_TEXT_CANCEL_RECORD)
 # Кнопка для скачування таблиці
 button_open_sheet = KeyboardButton(BUTTON_TEXT_OPEN_SHEET)
+# Кнопка для прогнозу черги
+button_prediction = KeyboardButton(BUTTON_TEXT_PREDICTION)
 # Кнопка для очищення черги(відображається для всіх, але працює лише для адмінів)
 #button_clear_queue = KeyboardButton(BUTTON_TEXT_CLEAR_QUEUE)
 # Кнопка для скасування поточної дії
@@ -525,7 +528,7 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup(
 )
 '''
 MAIN_KEYBOARD = ReplyKeyboardMarkup(
-    [[button_join, button_cancel_record], [button_status, button_show], [button_open_sheet]],
+    [[button_join, button_cancel_record], [button_status, button_show], [button_open_sheet, button_prediction]],
     one_time_keyboard=False,  # Клавіатура залишається після використання
     resize_keyboard=True      # Клавіатура буде меншого розміру
 )
@@ -830,6 +833,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             "* <code>Записатися / Перенести</code> - записатися або перенести дату відвідання\n"
             "* <code>Скасувати запис</code> - скасувати свій запис\n"
             "* <code>Переглянути чергу</code> - переглянути поточну чергу повністю або на обраний день\n"
+            "* <code>Прогноз черги</code> - графік ймовірності проходження черги\n"
             "* <code>Відкрити таблицю</code> - перейти до таблиці Google Sheets з даними черги (тільки для адміністраторів)\n"
             #"<code>Очистити чергу</code> - очистити чергу (тільки для адміністраторів)\n"
             "* <code>Скасувати ввід</code> - скасувати ввід під час діалогу"
@@ -985,6 +989,14 @@ async def open_sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     logger.info(f"Користувач {get_user_log_info(user)} отримав посилання на Google Sheet.")
     await update.message.reply_text(
         f"Ось посилання на Google Таблицю з даними черги:\n{sheet_url}",
+        reply_markup=MAIN_KEYBOARD
+    )
+
+async def prediction_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Відправляє користувачу посилання на сайт з прогнозом."""
+    site_url = "https://zbstof.github.io/vlk-zakrevskoho/"
+    await update.message.reply_text(
+        f"Графік прогнозу черги доступний за посиланням:\n{site_url}",
         reply_markup=MAIN_KEYBOARD
     )
 
@@ -2365,6 +2377,7 @@ def main() -> None:
     # --- Загальні обробники для окремих кнопок (НЕ розмов) ---
     # Вони мають бути після ConversationHandler, але до загального fallback
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(BUTTON_TEXT_OPEN_SHEET), open_sheet_command))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(BUTTON_TEXT_PREDICTION), prediction_command))
     #application.add_handler(MessageHandler(filters.TEXT & filters.Regex(BUTTON_TEXT_CLEAR_QUEUE), clear_queue_command))
     # Обробник кнопки "Скасувати ввід" поза розмовами.
     # Він вже доданий як fallback у кожному ConversationHandler,
