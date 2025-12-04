@@ -38,6 +38,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+# Вимикаємо надлишкові HTTP логи
+logging.getLogger('httpx').setLevel(logging.WARNING)
 # Налаштування логування для APScheduler (для дебагу)
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
 # Налаштування логування для asyncio (для дебагу)
@@ -65,6 +67,8 @@ CREDS = None
 
 # Глобальний DataFrame
 queue_df = None
+
+DAILY_SHEETS_CACHE_DIR = "daily_sheets_cache"
 
 # Функція для збереження config.ini
 def save_config():
@@ -150,6 +154,9 @@ def initialize_bot():
             
     # Ініціалізація DataFrame при запуску
     queue_df = load_queue_data()
+    
+    # Створення директорії для кешу якщо не існує
+    os.makedirs(DAILY_SHEETS_CACHE_DIR, exist_ok=True)
 
 # Стан для ConversationHandler для запису (/join)
 JOIN_GETTING_ID, JOIN_GETTING_DATE = range(2)
@@ -182,115 +189,84 @@ def get_date_from_ordinal(ordinal):
     total_days = weeks * 7 + days
     return anchor + datetime.timedelta(days=total_days)
 
-def calculate_prediction(user_id, stats_df):
+def calculate_prediction(user_id, stats_df=None):
+    """
+    Розраховує прогноз дати візиту для user_id використовуючи детальні дані зі щоденних аркушів.
+    
+    Args:
+        user_id: ID користувача
+        stats_df: DataFrame зі stats (не використовується, залишено для сумісності)
+    
+    Returns:
+        dict з прогнозом або None
+    """
+    try:
+        import daily_sheets_sync
+        daily_sheets_sync.sync_daily_sheets(SHEETS_SERVICE, STATS_SHEET_ID, STATS_WORKSHEET_NAME)
+        prediction = daily_sheets_sync.calculate_prediction_with_daily_data(user_id, use_daily_sheets=True)
+        if prediction:
+            logger.info(f"Використано прогноз з {prediction.get('data_points', 0)} точок даних")
+            return prediction
+    except Exception as e:
+        logger.error(f"Помилка прогнозування: {e}")
+    
+    return None
+
+def calculate_daily_entry_probability(tomorrow_ids: list, stats_df: pd.DataFrame, target_date: datetime.date = None) -> dict:
+    """
+    Розраховує ймовірність проходження для списку ID, запланованих на певну дату, 
+    використовуючи статистичну модель прогнозування та історичні дані про пропускну здатність.
+    
+    Враховує історичні патерни відвідуваності (не всі люди з меншими номерами приходять).
+    
+    Аргументи:
+        tomorrow_ids (list): Список ID (можуть бути рядками або числами), що представляють чергу.
+                             Порядок важливий: перший елемент - 1-й у черзі.
+        stats_df (pd.DataFrame): DataFrame з історичною статистикою.
+        target_date (datetime.date): Дата для якої розраховується ймовірність. За замовчуванням - завтра.
+        
+    Повертає:
+        dict: {id: відсоток_ймовірності}
+    """
     if stats_df is None or stats_df.empty:
-        return None
+        return {uid: 0.0 for uid in tomorrow_ids}
+    
+    if target_date is None:
+        target_date = datetime.date.today() + datetime.timedelta(days=1)
+    
+    try:
+        probabilities = {}
         
-    df = stats_df.copy()
-    
-    # Перевіряємо наявність необхідних стовпців
-    required_cols = ['Останній номер що зайшов', 'Перший номер що зайшов', 'Дата прийому']
-    if not all(col in df.columns for col in required_cols):
-        return None
-
-    # Перетворення в числовий формат та формат дати
-    df['id_max'] = pd.to_numeric(df['Останній номер що зайшов'], errors='coerce')
-    df['id_min'] = pd.to_numeric(df['Перший номер що зайшов'], errors='coerce')
-    df['date'] = pd.to_datetime(df['Дата прийому'], format='%d.%m.%Y', dayfirst=True, errors='coerce').dt.date
-    
-    # Видаляємо рядки, де немає дати або хоча б одного з ID (min або max) - сувора вимога як в index.html
-    df = df.dropna(subset=['id_max', 'id_min', 'date'])
-    
-    if len(df) < 5: # Потрібна достатня кількість точок
-        return None
-
-    df['ordinal'] = df['date'].apply(get_ordinal_date)
-    
-    # Розраховуємо середній ID для кожного дня (якщо в день було кілька записів, групуємо)
-    # В index.html логіка: (min + max) для кожного рядка, потім середнє для дня.
-    # Тут ми беремо середнє для рядка:
-    df['avg_id'] = (df['id_max'] + df['id_min']) / 2.0
-    
-    # Групуємо за датою (ordinal), щоб отримати одну точку на день
-    daily_stats = df.groupby('ordinal')['avg_id'].mean().reset_index()
-    daily_stats = daily_stats.sort_values('ordinal')
-    
-    X = daily_stats['avg_id'].values
-    Y = daily_stats['ordinal'].values
-    n = len(X)
-    
-    # Експоненційні ваги
-    weights = np.exp(-3 + (np.arange(n) / (n - 1)) * 3)
-    
-    sumW = np.sum(weights)
-    sumWX = np.sum(weights * X)
-    sumWY = np.sum(weights * Y)
-    # зважена лінійна регресія
-    sumWXX = np.sum(weights * X**2)
-    sumWXY = np.sum(weights * X * Y)
-    
-    denom = sumW * sumWXX - sumWX**2
-    if denom == 0:
-        return None
+        for rank, uid in enumerate(tomorrow_ids, start=1):
+            main_id = extract_main_id(uid)
+            
+            # Використовуємо покращений прогноз
+            prediction = calculate_prediction(main_id, stats_df)
+            
+            if prediction and 'dist' in prediction:
+                prob = calculate_date_probability(target_date, prediction['dist'])
+                probabilities[uid] = round(prob, 1)
+            else:
+                # Fallback: проста логіка на основі пропускної здатності
+                target_col = 'Зайшов'
+                counts = pd.to_numeric(stats_df[target_col], errors='coerce').dropna()
+                counts = counts[counts > 0]
+                counts = counts.tail(10)
+                
+                if counts.empty:
+                    probabilities[uid] = 0.0
+                else:
+                    # Для позиції rank в черзі: скільки днів пропускна здатність була >= rank
+                    total_days = len(counts)
+                    days_covered = (counts >= rank).sum()
+                    prob = (days_covered / total_days) * 100
+                    probabilities[uid] = round(prob, 1)
         
-    slope = (sumW * sumWXY - sumWX * sumWY) / denom
-    intercept = (sumWY - slope * sumWX) / sumW
-    
-    # Статистика для інтервалів
-    weightedMeanX = sumWX / sumW
-    # Зважена дисперсія X
-    weightedVarX = np.sum(weights * (X - weightedMeanX)**2)
-    
-    yPred = slope * X + intercept
-    residuals = Y - yPred
-    weightedSumResSq = np.sum(weights * residuals**2)
-    
-    dof = sumW - 2
-    if dof <= 0:
-        return None
+        return probabilities
         
-    mseWeighted = weightedSumResSq / dof
-    
-    # T-показники
-    tScore90 = stats.t.ppf(0.95, dof)
-    tScore50 = stats.t.ppf(0.75, dof)
-    
-    predOrd = slope * user_id + intercept
-    
-    term3 = (user_id - weightedMeanX)**2 / weightedVarX
-    sePred = np.sqrt(mseWeighted * (1 + 1/sumW + term3))
-    
-    margin90 = tScore90 * sePred
-    margin50 = tScore50 * sePred
-    
-    # Межі
-    l90_ord = predOrd - margin90
-    h90_ord = predOrd + margin90
-    l50_ord = predOrd - margin50
-    h50_ord = predOrd + margin50
-    
-    # Обмеження майбутнім (наступний робочий день після останньої історичної дати)
-    max_hist_ord = df['ordinal'].max()
-    min_feasible = max_hist_ord + 1
-    
-    # Обмежуємо нижню межу, тільки якщо ID в майбутньому (більше максимального історичного ID)
-    if user_id > df['id_max'].max():
-        l90_ord = max(l90_ord, min_feasible)
-        l50_ord = max(l50_ord, min_feasible)
-        # Перевірка валідності початку діапазону
-    
-    return {
-        'l90': get_date_from_ordinal(l90_ord),
-        'l50': get_date_from_ordinal(l50_ord),
-        'mean': get_date_from_ordinal(predOrd),
-        'h50': get_date_from_ordinal(h50_ord),
-        'h90': get_date_from_ordinal(h90_ord),
-        'dist': {
-            'loc': predOrd,
-            'scale': sePred,
-            'df': dof
-        }
-    }
+    except Exception as e:
+        logger.error(f"Помилка розрахунку ймовірності входу: {e}")
+        return {uid: 0.0 for uid in tomorrow_ids}
 
 # Завантаження даних з Google Sheet або створення нового DataFrame
 def load_queue_data() -> pd.DataFrame | None:
@@ -385,9 +361,9 @@ async def get_stats_data() -> pd.DataFrame | None:
         stats_df = pd.DataFrame(list_of_lists[1:], columns=list_of_lists[0])
         # 3. Підготовка даних (перетворення типів)
         if 'Останній номер що зайшов' in stats_df.columns:
-            stats_df['Останній номер що зайшов'] = stats_df['Останній номер що зайшов'].apply(extract_main_id)
+            stats_df['Останній номер що зайшов'] = pd.to_numeric(stats_df['Останній номер що зайшов'], errors='coerce')
         if 'Перший номер що зайшов' in stats_df.columns:
-            stats_df['Перший номер що зайшов'] = stats_df['Перший номер що зайшов'].apply(extract_main_id)
+            stats_df['Перший номер що зайшов'] = pd.to_numeric(stats_df['Перший номер що зайшов'], errors='coerce')
             
         stats_df['Дата прийому'] = pd.to_datetime(stats_df['Дата прийому'], format="%d.%m.%Y", dayfirst=True, errors='coerce')
         
@@ -1467,15 +1443,20 @@ async def join_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         return JOIN_GETTING_DATE # Залишаємося в тому ж стані
 
     # ПЕРЕВІРКА: чи дата співпадає з поточною датою запису
-    if date_input == previous_state:
-        logger.warning(f"Користувач {get_user_log_info(update.effective_user)} ввів дату, що співпадає з попереднім записом: '{date_input}'")
-        DATE_KEYBOARD=date_keyboard(current_date_obj, 1, days_ahead)
-        await update.message.reply_text(
-            f"Дата не повинна співпадати з поточною датою запису (`{chosen_date.strftime('%d.%m.%Y')}`). Будь ласка, оберіть іншу дату або скасуйте дію.",
-            parse_mode='Markdown',
-            reply_markup=DATE_KEYBOARD
-        )
-        return JOIN_GETTING_DATE # Залишаємося в тому ж стані        
+    if previous_state:
+        try:
+            previous_date_obj = datetime.datetime.strptime(previous_state, "%d.%m.%Y").date()
+            if chosen_date == previous_date_obj:
+                logger.warning(f"Користувач {get_user_log_info(update.effective_user)} ввів дату, що співпадає з попереднім записом: '{chosen_date.strftime('%d.%m.%Y')}'")
+                DATE_KEYBOARD=date_keyboard(current_date_obj, 1, days_ahead)
+                await update.message.reply_text(
+                    f"Дата не повинна співпадати з поточною датою запису (`{chosen_date.strftime('%d.%m.%Y')}`). Будь ласка, оберіть іншу дату або скасуйте дію.",
+                    parse_mode='Markdown',
+                    reply_markup=DATE_KEYBOARD
+                )
+                return JOIN_GETTING_DATE # Залишаємося в тому ж стані
+        except ValueError:
+            logger.warning(f"Не вдалося розпарсити попередню дату: '{previous_state}'")        
 
     # --- ЛОГІКА ПОПЕРЕДЖЕНЬ ---
     prediction = context.user_data.get('prediction_bounds')
