@@ -302,7 +302,7 @@ def parse_daily_sheet_attendance(csv_file):
         # Пропускаємо порожні рядки та нечислові номери
         if not number:
             continue
-            
+        
         if not number.isdigit():
             continue
         

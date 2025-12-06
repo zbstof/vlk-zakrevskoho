@@ -32,7 +32,7 @@
     <div id="error" class="error"></div>
     
     <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-        <input type="text" id="queueInput" placeholder="Введіть номер черги (наприклад, 4148 або 4148/1)" style="padding: 5px; width: 250px;">
+        <input type="text" id="queueInput" placeholder="Номер черги" style="padding: 5px; width: 150px;">
         <button id="findBtn" style="padding: 5px 10px; cursor: pointer;">Показати прогноз</button>
         <button id="resetZoomBtn" style="padding: 5px 10px; cursor: pointer;">Скинути зум</button>
         <span style="margin-left: auto; color: #555; font-style: italic;">👉 Натисніть на графік щоб побачити ймовірності початку ВЛК</span>
@@ -112,6 +112,33 @@
             return null;
         }
 
+        function numericToId(numericVal) {
+            // Converts numeric value back to ID string (INVERSE of idToNumeric)
+            // 1234.0 -> "1234"
+            // 1234.01 -> "1234/1"
+            // 1234.04 -> "1234/4"
+            const main = Math.floor(numericVal);
+            const fractional = numericVal - main;
+            
+            // Use tighter tolerance for detecting "whole" numbers
+            if (Math.abs(fractional) < 0.001) {
+                return String(main);
+            }
+            
+            const sub = Math.round(fractional * 100);
+            
+            // Debug logging for problematic IDs
+            if (main === 4794 && sub > 0) {
+                console.log('numericToId DEBUG:', { numericVal, main, fractional, sub, result: `${main}/${sub}` });
+            }
+            
+            if (sub > 0) {
+                return `${main}/${sub}`;
+            }
+            
+            return String(main);
+        }
+
         function parseDate(dateStr) {
             // Format: DD.MM.YYYY
             const match = dateStr.match(/(\d{2})\.(\d{2})\.(\d{4})/);
@@ -181,11 +208,9 @@
                 
                 records.forEach(row => {
                     const idStr = String(row[idColumnName] || '').trim();
-                    if (/^\d+/.test(idStr)) {
-                        const id = parseInt(idStr, 10);
-                        if (!isNaN(id)) {
-                            migratedIds.push(id);
-                        }
+                    // Приймаємо ID з цифрами (включно з "4794/4")
+                    if (idStr && /^\d{4}(\/\d)?/.test(idStr)) {
+                        migratedIds.push(idStr);
                     }
                 });
                 
@@ -314,31 +339,9 @@
         function processAndRender(attendanceData, preBookedRecords, migratedData) {
             console.log(`Завантажено ${attendanceData.total_points} точок відвідуваності`);
             
+            // Обробка даних фактичної відвідуваності з щоденних аркушів
             let globalMaxId = 0;
             const preBookedData = [];
-            const migratedChartData = [];
-
-            // Обробка даних попередніх записів (якщо вони доступні)
-            if (preBookedRecords) {
-                preBookedRecords.forEach(row => {
-                    const idStr = String(row['ID'] || '').trim();
-                    const dateStr = String(row['Дата'] || '').trim();
-                    
-                    if (!/^\d+$/.test(idStr)) return; 
-                    
-                    const id = parseInt(idStr, 10);
-                    if (isNaN(id)) return;
-
-                    if (id > globalMaxId) globalMaxId = id;
-
-                    const date = parseDate(dateStr);
-                    if (date) {
-                        preBookedData.push({ id: id, date: date });
-                    }
-                });
-            }
-            
-            // Обробка даних фактичної відвідуваності з щоденних аркушів
             const allAttendancePoints = [];
             const liveQueuePoints = [];
             const regularPoints = [];
@@ -353,29 +356,29 @@
             const numericToOriginalId = new Map();
             
             attendanceData.attendance_points.forEach(point => {
-                // Конвертуємо string ID в numeric (для регресії)
-                const idOriginal = String(point.id);
-                const idNumeric = idToNumeric(idOriginal);
+                // String ID - first-class citizen
+                const id = String(point.id);
+                const idNumeric = idToNumeric(id);
                 if (idNumeric === null || isNaN(idNumeric)) {
                     console.warn('Пропущено невалідний ID:', point.id);
                     return;
                 }
                 
-                // Зберігаємо mapping для відображення
-                numericToOriginalId.set(idNumeric, idOriginal);
+                // Зберігаємо mapping для конвертації назад
+                numericToOriginalId.set(idNumeric, id);
                 
                 const date = new Date(point.date + 'T12:00:00');
                 const ordinal = toOrdinal(date);
                 const isLive = point.is_live || false;
                 
-                const pointData = { id: idNumeric, idOriginal, date, ordinal, isLive };
+                const pointData = { id, idNumeric, date, ordinal, isLive };
                 allAttendancePoints.push(pointData);
                 
-                // Розділяємо на живу чергу та регулярну
+                // Для chart plotting використовуємо numeric, але зберігаємо string
                 if (isLive) {
-                    liveQueuePoints.push({ x: date, y: idNumeric, idOriginal });
+                    liveQueuePoints.push({ x: date, y: idNumeric, id });
                 } else {
-                    regularPoints.push({ x: date, y: idNumeric, idOriginal });
+                    regularPoints.push({ x: date, y: idNumeric, id });
                 }
                 
                 if (idNumeric > maxId) maxId = idNumeric;
@@ -402,10 +405,17 @@
                 }
             });
             
-            // Додаємо буфер
-            const targetEndId = Math.max(globalMaxId, maxId) + 100;
+            // Початковий targetEndId: якщо немає preBookedRecords, використовуємо мінімальний буфер
+            const targetEndId = preBookedRecords 
+                ? Math.max(globalMaxId, maxId) + 100 
+                : maxId + 100;
 
-            if (allAttendancePoints.length === 0) throw new Error("Дійсних даних не знайдено.");
+            if (allAttendancePoints.length === 0) {
+                console.error('No attendance points found!');
+                throw new Error("Дійсних даних не знайдено.");
+            }
+            
+            console.log('Attendance points loaded:', allAttendancePoints.length);
 
             // Calculate average daily count (last 10 days)
             const dailyCounts = Array.from(dailyRanges.values()).map(d => ({
@@ -418,21 +428,16 @@
                 ? Math.round(last10.reduce((sum, item) => sum + item.count, 0) / last10.length)
                 : 0;
 
-            // Фільтрація попередніх записів (> 3 місяці від останньої історичної дати)
-            const lastHistoricalDateOrdinal = maxDateOrdinal;
-            const cutoffOrdinal = lastHistoricalDateOrdinal + 65; // 3 місяці ≈ 65 робочих днів
-            
-            const filteredPreBookedData = preBookedData.filter(d => {
-                const ord = toOrdinal(d.date);
-                return ord <= cutoffOrdinal;
-            });
+            // Pre-booked та Migrated дані будуть додані пізніше через updateChartWithPreBookedData
+            const preBookedChartData = [];
+            const migratedChartData = [];
 
             // Групуємо точки відвідуваності за ID для регресії
             // Якщо ID відвідав кілька разів, беремо середню дату
             const idGroups = new Map();
             allAttendancePoints.forEach(point => {
                 if (!idGroups.has(point.id)) {
-                    idGroups.set(point.id, { ordinals: [], isLive: false });
+                    idGroups.set(point.id, { ordinals: [], isLive: false, idNumeric: point.idNumeric });
                 }
                 idGroups.get(point.id).ordinals.push(point.ordinal);
                 // Якщо хоча б одне відвідування було за живою чергою, маркуємо ID
@@ -443,12 +448,13 @@
             
             const regressionData = Array.from(idGroups.entries()).map(([id, data]) => {
                 const avgOrdinal = data.ordinals.reduce((a, b) => a + b, 0) / data.ordinals.length;
-                return { id: id, ordinal: avgOrdinal, isLive: data.isLive };
+                return { id, idNumeric: data.idNumeric, ordinal: avgOrdinal, isLive: data.isLive };
             });
             
-            regressionData.sort((a, b) => a.id - b.id);
+            regressionData.sort((a, b) => a.idNumeric - b.idNumeric);
 
-            const X = regressionData.map(d => d.id); // Предиктор: ID черги
+            console.log('Regression data:', regressionData.length, 'groups');
+            const X = regressionData.map(d => d.idNumeric); // Предиктор: ID черги
             const Y = regressionData.map(d => d.ordinal); // Цільова змінна: Дата
             const n = regressionData.length;
 
@@ -498,50 +504,60 @@
             // 50% confidence -> alpha=0.50, two-tailed -> 0.75 (75th percentile)
             const tScore50 = jStat.studentt.inv(0.75, degreesOfFreedom);
 
-            // 5. Generate Prediction Data Points
-            // We want to plot Queue ID on Y axis, Date on X axis.
-            // Chart.js Scatter: x=Date, y=ID
-            
-            // Генеруємо для всього діапазону ID (від мінімального до максимального + буфер)
-            const minHistoricalId = Math.min(...regressionData.map(d => d.id));
-            const startId = minHistoricalId;
-            const endId = targetEndId; 
-            const minFeasibleOrdinal = maxDateOrdinal + 1; // Next day after last history
-
-            // We generate dense points for the prediction lines
-            const predPoints = [];
-            
-            // Use step of 1 for maximum vertical resolution
-            for (let qId = startId; qId <= endId; qId += 1) {
-                let predOrd = model.slope * qId + model.intercept;
+            // DRY функція для генерації прогнозів
+            const generatePredictions = (startId, endId, includeSlashedIds = true) => {
+                const allNumericIds = new Set();
                 
-                // Standard Error
-                const term3 = Math.pow(qId - weightedMeanX, 2) / weightedVarX;
-                const sePred = Math.sqrt(mseWeighted * (1 + 1/sumW + term3));
+                if (includeSlashedIds) {
+                    // Додаємо всі унікальні ID з regressionData (включно зі слешованими)
+                    regressionData.forEach(d => allNumericIds.add(d.idNumeric));
+                }
+                
+                // Додаємо цілі числа для гладких ліній
+                const minIdInt = Math.floor(startId);
+                const maxIdInt = Math.ceil(endId);
+                for (let i = minIdInt; i <= maxIdInt; i++) {
+                    allNumericIds.add(i);
+                }
+                
+                const sortedIds = Array.from(allNumericIds).sort((a, b) => a - b);
+                const predPoints = [];
+                
+                sortedIds.forEach(qId => {
+                    let predOrd = model.slope * qId + model.intercept;
+                    
+                    const term3 = Math.pow(qId - weightedMeanX, 2) / weightedVarX;
+                    const sePred = Math.sqrt(mseWeighted * (1 + 1/sumW + term3));
 
-                const margin90 = tScore90 * sePred;
-                const margin50 = tScore50 * sePred;
+                    const margin90 = tScore90 * sePred;
+                    const margin50 = tScore50 * sePred;
 
-                let l90 = predOrd - margin90;
-                let h90 = predOrd + margin90;
-                let l50 = predOrd - margin50;
-                let h50 = predOrd + margin50;
+                    let l90 = predOrd - margin90;
+                    let h90 = predOrd + margin90;
+                    let l50 = predOrd - margin50;
+                    let h50 = predOrd + margin50;
 
-                // Sort bounds
-                if (l90 > predOrd) l90 = predOrd;
-                if (h90 < predOrd) h90 = predOrd;
-                if (l50 > predOrd) l50 = predOrd;
-                if (h50 < predOrd) h50 = predOrd;
+                    if (l90 > predOrd) l90 = predOrd;
+                    if (h90 < predOrd) h90 = predOrd;
+                    if (l50 > predOrd) l50 = predOrd;
+                    if (h50 < predOrd) h50 = predOrd;
 
-                predPoints.push({
-                    id: qId,
-                    mean: fromOrdinal(predOrd),
-                    l90: fromOrdinal(l90), // 5th percentile
-                    h90: fromOrdinal(h90), // 95th percentile
-                    l50: fromOrdinal(l50),
-                    h50: fromOrdinal(h50)
+                    predPoints.push({
+                        id: qId,
+                        mean: fromOrdinal(predOrd),
+                        l90: fromOrdinal(l90),
+                        h90: fromOrdinal(h90),
+                        l50: fromOrdinal(l50),
+                        h50: fromOrdinal(h50)
+                    });
                 });
-            }
+                
+                return predPoints;
+            };
+
+            // 5. Generate Prediction Data Points
+            const minHistoricalId = Math.min(...regressionData.map(d => d.idNumeric));
+            const predPoints = generatePredictions(minHistoricalId, targetEndId, true);
 
             // 6. Chart.js Data Structure
             
@@ -563,16 +579,20 @@
             const earliestHistoricalDate = fromOrdinal(minDateOrdinal);
             const earliestHistoricalTime = earliestHistoricalDate.getTime();
 
-            // Pre-booked Points (From second sheet, filtered)
-            const preBookedChartData = filteredPreBookedData.map(d => ({ x: d.date, y: d.id }));
-
             // Створюємо повні дані для freezeAtId
-            const allMeanData = predPoints.map(p => ({ x: p.mean, y: p.id }));
+            // ВАЖЛИВО: зберігаємо і string ID і numeric (для plotting)
+            const allMeanData = predPoints.map(p => ({ 
+                x: p.mean, 
+                y: p.id,  // numeric для chart plotting
+                id: numericToId(p.id)  // STRING для display
+            }));
             const allL90Data = predPoints.map(p => ({ x: p.l90, y: p.id }));
             const allH90Data = predPoints.map(p => ({ x: p.h90, y: p.id }));
             const allL50Data = predPoints.map(p => ({ x: p.l50, y: p.id }));
             const allH50Data = predPoints.map(p => ({ x: p.h50, y: p.id }));
             
+            console.log('Generated allMeanData points:', allMeanData.length);
+
             // Фільтруємо прогнозні лінії: інтервали від наступного робочого дня, mean від найранішої дати
             const filterFutureOnly = (arr) => arr.filter(p => p.x.getTime() >= nextWorkingTime);
             const filterFromEarliest = (arr) => arr.filter(p => p.x.getTime() >= earliestHistoricalTime);
@@ -585,7 +605,8 @@
 
             const chart = renderChart(regularPoints, liveQueuePoints, histRanges, preBookedChartData, migratedChartData,
                 meanData, l90Data, h90Data, l50Data, h50Data,
-                allMeanData, allL90Data, allH90Data, allL50Data, allH50Data, numericToOriginalId);
+                allMeanData, allL90Data, allH90Data, allL50Data, allH50Data, numericToOriginalId,
+                model, tScore90, tScore50, weightedMeanX, weightedVarX, mseWeighted, sumW);
             
             return {
                 chart,
@@ -597,13 +618,18 @@
                 allL50Data,
                 allH50Data,
                 avgDailyCount,
-                numericToOriginalId
+                numericToOriginalId,
+                generatePredictions,  // Функція для регенерації
+                minHistoricalId,
+                nextWorkingTime,
+                earliestHistoricalTime
             };
         }
 
         function renderChart(regularPoints, liveQueuePoints, histRanges, preBookedData, migratedData,
                              meanData, l90Data, h90Data, l50Data, h50Data,
-                             allMeanData, allL90Data, allH90Data, allL50Data, allH50Data, numericToOriginalId) {
+                             allMeanData, allL90Data, allH90Data, allL50Data, allH50Data, numericToOriginalId,
+                             model, tScore90, tScore50, weightedMeanX, weightedVarX, mseWeighted, sumW) {
             const ctx = document.getElementById('queueChart').getContext('2d');
             
             // Об'єднуємо для зворотної сумісності з freezeAtId
@@ -645,21 +671,61 @@
 
             // Helper to freeze chart at a specific ID
             // Defined here to access the data arrays via closure
-            const freezeAtId = (chart, targetId) => {
-                // Find nearest point in allMeanData (unfiltered)
-                if (!allMeanData || allMeanData.length === 0) {
-                    console.error('allMeanData is empty', { 
-                        allMeanData, 
-                        allL90Data: allL90Data?.length,
-                        predPointsLength: predPoints?.length 
-                    });
-                    alert('Помилка: дані прогнозу не завантажені. Спробуйте перезавантажити сторінку.');
+            const freezeAtId = (chart, targetIdString) => {
+                // Конвертуємо string → numeric
+                const targetIdNumeric = idToNumeric(targetIdString);
+                if (targetIdNumeric === null || isNaN(targetIdNumeric)) {
+                    console.error('Invalid ID:', targetIdString);
+                    alert(`Невірний формат ID: ${targetIdString}`);
                     return;
                 }
                 
-                const nearest = allMeanData.reduce((prev, curr) => 
-                    Math.abs(curr.y - targetId) < Math.abs(prev.y - targetId) ? curr : prev
-                );
+                console.log('freezeAtId called with STRING ID:', targetIdString);
+                console.log('Converted to numeric:', targetIdNumeric);
+                
+                // Шукаємо чи є готовий прогноз для цього ID
+                let predictionData = allMeanData.find(p => Math.abs(p.y - targetIdNumeric) < 0.001);
+                
+                if (!predictionData) {
+                    console.log('No pre-computed prediction, calculating on-demand for:', targetIdString);
+                    
+                    // Обчислюємо прогноз для цього ID динамічно
+                    let predOrd = model.slope * targetIdNumeric + model.intercept;
+                    
+                    const term3 = Math.pow(targetIdNumeric - weightedMeanX, 2) / weightedVarX;
+                    const sePred = Math.sqrt(mseWeighted * (1 + 1/sumW + term3));
+                    
+                    const margin90 = tScore90 * sePred;
+                    const margin50 = tScore50 * sePred;
+                    
+                    let l90_ord = predOrd - margin90;
+                    let h90_ord = predOrd + margin90;
+                    let l50_ord = predOrd - margin50;
+                    let h50_ord = predOrd + margin50;
+                    
+                    // Створюємо об'єкт з прогнозом
+                    predictionData = {
+                        y: targetIdNumeric,
+                        id: targetIdString,  // STRING ID
+                        x: fromOrdinal(predOrd)
+                    };
+                    
+                    // Додаємо до масивів для подальшого використання
+                    const newL90 = { x: fromOrdinal(l90_ord), y: targetIdNumeric };
+                    const newH90 = { x: fromOrdinal(h90_ord), y: targetIdNumeric };
+                    const newL50 = { x: fromOrdinal(l50_ord), y: targetIdNumeric };
+                    const newH50 = { x: fromOrdinal(h50_ord), y: targetIdNumeric };
+                    
+                    allMeanData.push(predictionData);
+                    allL90Data.push(newL90);
+                    allH90Data.push(newH90);
+                    allL50Data.push(newL50);
+                    allH50Data.push(newH50);
+                }
+                
+                const nearest = predictionData;
+                
+                console.log('Using prediction:', nearest.y, '/', nearest.id);
                 
                 // Find matching bounds index
                 const idx = allMeanData.indexOf(nearest);
@@ -667,30 +733,32 @@
                 // Check if this ID exists in Historical or Pre-booked data
                 let actualDate = null;
                 let actualType = null;
-                let actualIdOriginal = null;
                 
-                // Check Historical (both regular and live queue)
-                const histMatch = histData.find(d => Math.abs(d.y - targetId) < 0.001);
+                // Check Historical (both regular and live queue) - exact string match
+                const histMatch = histData.find(d => d.id === targetIdString);
                 if (histMatch) {
                     actualDate = histMatch.x;
                     actualType = 'Історична дата';
-                    actualIdOriginal = histMatch.idOriginal || null;
                 } else {
-                    // Check Pre-booked
+                    // Check Pre-booked - exact string match
                     const preBookedDataset = chart.data.datasets.find(ds => ds.label === 'Попередньо записані');
+                    console.log('Checking pre-booked dataset:', preBookedDataset?.data?.length, 'points');
                     if (preBookedDataset && preBookedDataset.data) {
-                        const preBookedMatch = preBookedDataset.data.find(d => Math.abs(d.y - targetId) < 0.001);
+                        console.log('Looking for:', targetIdString);                        
+                        const preBookedMatch = preBookedDataset.data.find(d => d.id === targetIdString);
+                        console.log('Pre-booked match:', preBookedMatch);
+                        
                         if (preBookedMatch) {
                             actualDate = preBookedMatch.x;
                             actualType = 'Запис на';
                         }
                     }
                     
-                    // Check Migrated
+                    // Check Migrated - numeric match (migrated IDs are integers)
                     if (!actualDate) {
                         const migratedDataset = chart.data.datasets.find(ds => ds.label === 'Перенесені');
                         if (migratedDataset && migratedDataset.data) {
-                            const migratedMatch = migratedDataset.data.find(d => Math.abs(d.y - targetId) < 0.001);
+                            const migratedMatch = migratedDataset.data.find(d => Math.abs(d.y - targetIdNumeric) < 0.001);
                             if (migratedMatch) {
                                 actualDate = migratedMatch.x;
                                 actualType = 'Перенесено на';
@@ -703,8 +771,10 @@
                     chart.frozen = true;
                     chart.options.plugins.tooltip.enabled = false;
                     
-                    // Знаходимо оригінальний string ID
-                    const displayId = actualIdOriginal || numericToOriginalId.get(nearest.y) || String(Math.round(nearest.y));
+                    // Знаходимо оригінальний string ID (first-class citizen)
+                    // Якщо є в історичних даних - використовуємо actualIdOriginal
+                    // Інакше конвертуємо numeric назад в string
+                    const displayId = nearest.id;
                     
                     chart.frozenData = {
                         id: nearest.y,
@@ -718,10 +788,11 @@
                         actualType: actualType
                     };
 
-                    // Update URL
+                    // Update URL with original string format
+                    // URLSearchParams.set() automatically handles URL encoding
                     if (window.history.replaceState) {
                         const url = new URL(window.location);
-                        url.searchParams.set('id', targetId);
+                        url.searchParams.set('id', displayId);
                         window.history.replaceState({}, '', url);
                     }
 
@@ -756,13 +827,13 @@
                     const handleSearch = () => {
                         const inputStr = input.value.trim();
                         if (!inputStr) return;
-                        
-                        const val = idToNumeric(inputStr);
-                        if (val !== null && !isNaN(val)) {
-                            freezeAtId(chart, val);
-                        } else {
-                            alert('Невірний формат номера черги. Використовуйте формат: 4148 або 4148/1');
+
+                        const numericVal = idToNumeric(inputStr);
+                        if (numericVal === null || isNaN(numericVal)) {
+                            alert('Невірний формат номера черги. Використовуйте формат: 9999 або 9999/9');
+                            return;
                         }
+                        freezeAtId(chart, inputStr);
                     };
                     
                     document.getElementById('resetZoomBtn').addEventListener('click', () => {
@@ -777,12 +848,14 @@
                     // Check URL for ID param on load
                     const urlParams = new URLSearchParams(window.location.search);
                     const idParam = urlParams.get('id');
+                    console.log('idParam', idParam);
                     if (idParam) {
+                        // URLSearchParams.get() automatically decodes
                         const val = idToNumeric(idParam);
                         if (val !== null && !isNaN(val)) {
-                            input.value = idParam; // Keep original format
-                            // Store the pending freeze ID, will be executed after pre-booked data loads
-                            chart.pendingFreezeId = val;
+                            input.value = idParam; // Keep original format (4148/1)
+                            // Store the pending freeze STRING ID
+                            chart.pendingFreezeId = idParam;
                         }
                     }
                     
@@ -815,9 +888,14 @@
                             if (points.length) {
                                 // Use the click Y value to find target
                                 const yValue = chart.scales.y.getValueForPixel(e.offsetY);
-                                const targetY = Math.round(yValue);
+                                const targetYNumeric = yValue;
                                 
-                                freezeAtId(chart, targetY);
+                                // Знаходимо найближчу точку і використовуємо її STRING ID
+                                const nearestPoint = allMeanData.reduce((prev, curr) => 
+                                    Math.abs(curr.y - targetYNumeric) < Math.abs(prev.y - targetYNumeric) ? curr : prev
+                                );
+
+                                freezeAtId(chart, nearestPoint.id);
                             }
                         }
                     });
@@ -1080,11 +1158,10 @@
                                 title: function(context) {
                                     // Show Queue ID in the tooltip title
                                     if (context.length > 0) {
-                                        const numericId = context[0].parsed.y;
-                                        const originalId = context[0].raw?.idOriginal || 
-                                                          numericToOriginalId.get(numericId) || 
-                                                          String(Math.round(numericId));
-                                        return `Номер у черзі: ${originalId}`;
+                                        const id = context[0].raw?.id || 
+                                                   numericToOriginalId.get(context[0].parsed.y) ||
+                                                   numericToId(context[0].parsed.y);
+                                        return `Номер у черзі: ${id}`;
                                     }
                                     return '';
                                 },
@@ -1150,19 +1227,71 @@
                 const idStr = String(row['ID'] || '').trim();
                 const dateStr = String(row['Дата'] || '').trim();
                 
-                if (!/^\d+$/.test(idStr)) return; 
-                
-                const id = parseInt(idStr, 10);
-                if (isNaN(id)) return;
+                // Приймаємо ID з цифрами (включно з "4794/4")
+                if (!idStr || !/^\d{4}(\/\d)?/.test(idStr)) return;
 
-                if (id > globalMaxId) globalMaxId = id;
+                // Конвертуємо в numeric для chart plotting
+                const idNumeric = idToNumeric(idStr);
+                if (idNumeric === null || isNaN(idNumeric)) return;
+
+                if (idNumeric > globalMaxId) globalMaxId = idNumeric;
 
                 const date = parseDate(dateStr);
                 if (date) {
-                    preBookedData.push({ id: id, date: date });
+                    // Зберігаємо обидва формати
+                    preBookedData.push({ id: idStr, idNumeric, date: date });
                 }
             });
 
+            // Регенеруємо прогнозні лінії до максимального ID з попередніх записів
+            if (globalMaxId > chartData.maxId) {
+                console.log('Extending predictions to', globalMaxId);
+                const extendedPredPoints = chartData.generatePredictions(chartData.minHistoricalId, globalMaxId + 100, true);
+                
+                const allMeanData = extendedPredPoints.map(p => ({ 
+                    x: p.mean, 
+                    y: p.id,
+                    id: numericToId(p.id)
+                }));
+                const allL90Data = extendedPredPoints.map(p => ({ x: p.l90, y: p.id }));
+                const allH90Data = extendedPredPoints.map(p => ({ x: p.h90, y: p.id }));
+                const allL50Data = extendedPredPoints.map(p => ({ x: p.l50, y: p.id }));
+                const allH50Data = extendedPredPoints.map(p => ({ x: p.h50, y: p.id }));
+                
+                chartData.allMeanData = allMeanData;
+                chartData.allL90Data = allL90Data;
+                chartData.allH90Data = allH90Data;
+                chartData.allL50Data = allL50Data;
+                chartData.allH50Data = allH50Data;
+                
+                // Фільтруємо для відображення
+                const filterFutureOnly = (arr) => arr.filter(p => p.x.getTime() >= chartData.nextWorkingTime);
+                const filterFromEarliest = (arr) => arr.filter(p => p.x.getTime() >= chartData.earliestHistoricalTime);
+
+                const meanData = filterFromEarliest(allMeanData);
+                const l90Data = filterFutureOnly(allL90Data);
+                const h90Data = filterFutureOnly(allH90Data);
+                const l50Data = filterFutureOnly(allL50Data);
+                const h50Data = filterFutureOnly(allH50Data);
+                
+                // Оновлюємо datasets
+                const meanDataset = chart.data.datasets.find(ds => ds.label === 'Прогноз (50% Шанс)');
+                if (meanDataset) meanDataset.data = meanData;
+                
+                const l90Dataset = chart.data.datasets.find(ds => ds.label === '5% Шанс');
+                if (l90Dataset) l90Dataset.data = l90Data;
+                
+                const h90Dataset = chart.data.datasets.find(ds => ds.label === '95% Шанс');
+                if (h90Dataset) h90Dataset.data = h90Data;
+                
+                const l50Dataset = chart.data.datasets.find(ds => ds.label === '25% Шанс');
+                if (l50Dataset) l50Dataset.data = l50Data;
+                
+                const h50Dataset = chart.data.datasets.find(ds => ds.label === '75% Шанс');
+                if (h50Dataset) h50Dataset.data = h50Data;
+            }
+
+            // Використовуємо STRING ID для порівняння
             const preBookedIds = new Set(preBookedData.map(d => d.id));
             
             let earliestPreBookedDate = null;
@@ -1174,8 +1303,16 @@
             const actualMigratedData = [];
             if (migratedData && migratedData.migratedIds && earliestPreBookedDate) {
                 migratedData.migratedIds.forEach(id => {
+                    // migratedIds містить STRING ID
                     if (!preBookedIds.has(id)) {
-                        actualMigratedData.push({ id: id, date: earliestPreBookedDate });
+                        const idNumeric = idToNumeric(id);
+                        if (idNumeric !== null && !isNaN(idNumeric)) {
+                            actualMigratedData.push({ 
+                                id: id, 
+                                idNumeric: idNumeric, 
+                                date: earliestPreBookedDate 
+                            });
+                        }
                     }
                 });
             }
@@ -1214,8 +1351,16 @@
                 return ord <= cutoffOrdinal;
             });
 
-            const preBookedChartData = filteredPreBookedData.map(d => ({ x: d.date, y: d.id }));
-            const migratedChartData = filteredMigratedData.map(d => ({ x: d.date, y: d.id }));
+            const preBookedChartData = filteredPreBookedData.map(d => ({ 
+                x: d.date, 
+                y: d.idNumeric,
+                id: d.id 
+            }));
+            const migratedChartData = filteredMigratedData.map(d => ({ 
+                x: d.date, 
+                y: d.idNumeric,
+                id: d.id 
+            }));
             
             const preBookedDataset = chart.data.datasets.find(ds => ds.label === 'Попередньо записані');
             if (preBookedDataset) {
@@ -1230,6 +1375,9 @@
             chart.update();
             
             if (chart.pendingFreezeId && chart.freezeAtId) {
+                console.log('Executing pending freeze for ID:', chart.pendingFreezeId);
+                console.log('Pre-booked data loaded:', preBookedChartData.length, 'points');
+                
                 setTimeout(() => {
                     chart.freezeAtId(chart, chart.pendingFreezeId);
                     delete chart.pendingFreezeId;
