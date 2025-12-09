@@ -431,16 +431,29 @@
             
             console.log('Attendance points loaded:', allAttendancePoints.length);
 
-            // Calculate average daily count (last 10 days)
-            const dailyCounts = Array.from(dailyRanges.values()).map(d => ({
-                date: d.date,
-                count: d.ids.length
-            }));
-            dailyCounts.sort((a, b) => b.date - a.date); // Descending
-            const last10 = dailyCounts.slice(0, 10);
-            const avgDailyCount = last10.length > 0 
-                ? Math.round(last10.reduce((sum, item) => sum + item.count, 0) / last10.length)
-                : 0;
+            // Calculate average daily count (last 10 working days)
+            const dateCountMap = new Map();
+            dailyRanges.forEach((data) => {
+                const iso = data.date.toISOString().split('T')[0];
+                dateCountMap.set(iso, data.ids.length);
+            });
+
+            const lastWorkingDate = fromOrdinal(maxDateOrdinal);
+            const lastWorkingDays = [];
+            let currentDate = new Date(lastWorkingDate);
+
+            while (lastWorkingDays.length < 10) {
+                const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    const iso = currentDate.toISOString().split('T')[0];
+                    const count = dateCountMap.get(iso) || 0;
+                    lastWorkingDays.push({ date: new Date(currentDate), count });
+                }
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+
+            const total = lastWorkingDays.reduce((sum, item) => sum + item.count, 0.0);
+            const avgDailyCount = (total / lastWorkingDays.length).toFixed(1);
 
             // Обробка preBooked та migrated даних
             const preBookedData = [];
@@ -606,25 +619,25 @@
             // DRY функція для генерації прогнозів
             const generatePredictions = (startId, endId, includeSlashedIds = true) => {
                 const allNumericIds = new Set();
-                
+
                 if (includeSlashedIds) {
                     // Додаємо всі унікальні ID з regressionData (включно зі слешованими)
                     regressionData.forEach(d => allNumericIds.add(d.idNumeric));
                 }
-                
+
                 // Додаємо цілі числа для гладких ліній
                 const minIdInt = Math.floor(startId);
                 const maxIdInt = Math.ceil(endId);
                 for (let i = minIdInt; i <= maxIdInt; i++) {
                     allNumericIds.add(i);
                 }
-                
+
                 const sortedIds = Array.from(allNumericIds).sort((a, b) => a - b);
                 const predPoints = [];
-                
+
                 sortedIds.forEach(qId => {
                     let predOrd = model.slope * qId + model.intercept;
-                    
+
                     const term3 = Math.pow(qId - weightedMeanX, 2) / weightedVarX;
                     const sePred = Math.sqrt(mseWeighted * (1 + 1/sumW + term3));
 
@@ -650,7 +663,7 @@
                         h50: fromOrdinal(h50)
                     });
                 });
-                
+
                 return predPoints;
             };
 
@@ -659,29 +672,29 @@
             const predPoints = generatePredictions(minHistoricalId, targetEndId, true);
 
             // 6. Chart.js Data Structure
-            
+
             // Визначаємо останню історичну дату
             const lastHistoricalDate = fromOrdinal(maxDateOrdinal);
-            
+
             // Знаходимо наступний робочий день після останньої історичної дати
             let nextWorkingDate = new Date(lastHistoricalDate);
             nextWorkingDate.setDate(nextWorkingDate.getDate() + 1);
-            
+
             // Пропускаємо вихідні (5 = субота, 6 = неділя)
             while (nextWorkingDate.getDay() === 0 || nextWorkingDate.getDay() === 6) {
                 nextWorkingDate.setDate(nextWorkingDate.getDate() + 1);
             }
-            
+
             const nextWorkingTime = nextWorkingDate.getTime();
-            
+
             // Визначаємо найранішу історичну дату
             const earliestHistoricalDate = fromOrdinal(minDateOrdinal);
             const earliestHistoricalTime = earliestHistoricalDate.getTime();
 
             // Створюємо повні дані для freezeAtId
             // ВАЖЛИВО: зберігаємо і string ID і numeric (для plotting)
-            const allMeanData = predPoints.map(p => ({ 
-                x: p.mean, 
+            const allMeanData = predPoints.map(p => ({
+                x: p.mean,
                 y: p.id,  // numeric для chart plotting
                 id: numericToId(p.id)  // STRING для display
             }));
@@ -689,7 +702,7 @@
             const allH90Data = predPoints.map(p => ({ x: p.h90, y: p.id }));
             const allL50Data = predPoints.map(p => ({ x: p.l50, y: p.id }));
             const allH50Data = predPoints.map(p => ({ x: p.h50, y: p.id }));
-            
+
             console.log('Generated allMeanData points:', allMeanData.length);
 
             const filterFutureOnly = (arr) => arr.filter(p => p.x.getTime() >= nextWorkingTime);
@@ -705,14 +718,14 @@
                 meanData, l90Data, h90Data, l50Data, h50Data,
                 allMeanData, allL90Data, allH90Data, allL50Data, allH50Data, numericToOriginalId,
                 model, tScore90, tScore50, weightedMeanX, weightedVarX, mseWeighted, sumW);
-            
+
             if (chart.pendingFreezeId && chart.freezeAtId) {
                 setTimeout(() => {
                     chart.freezeAtId(chart, chart.pendingFreezeId);
                     delete chart.pendingFreezeId;
                 }, 100);
             }
-            
+
             return chart;
         }
 
@@ -721,10 +734,10 @@
                              allMeanData, allL90Data, allH90Data, allL50Data, allH50Data, numericToOriginalId,
                              model, tScore90, tScore50, weightedMeanX, weightedVarX, mseWeighted, sumW) {
             const ctx = document.getElementById('queueChart').getContext('2d');
-            
+
             // Об'єднуємо для зворотної сумісності з freezeAtId
             const histData = [...regularPoints, ...liveQueuePoints];
-            
+
             // Custom Plugin for Variable Width Lines
             const variableWidthLinePlugin = {
                 id: 'variableWidthLine',
@@ -742,13 +755,13 @@
                         const xPos = x.getPixelForValue(range.x.getTime());
                         const yMin = y.getPixelForValue(range.y[0]);
                         const yMax = y.getPixelForValue(range.y[1]);
-                        
+
                         // Calculate thickness
                         // Scale: 0.2px per person, clamped between 2px and 30px
                         const thickness = Math.max(2, Math.min(range.thickness * 0.2, 30));
-                        
+
                         ctx.lineWidth = thickness;
-                        
+
                         ctx.beginPath();
                         ctx.moveTo(xPos, yMin);
                         ctx.lineTo(xPos, yMax);
@@ -769,61 +782,61 @@
                     alert(`Невірний формат ID: ${targetIdString}`);
                     return;
                 }
-                
+
                 console.log('freezeAtId called with STRING ID:', targetIdString);
                 console.log('Converted to numeric:', targetIdNumeric);
-                
+
                 // Шукаємо чи є готовий прогноз для цього ID
                 let predictionData = allMeanData.find(p => Math.abs(p.y - targetIdNumeric) < 0.001);
-                
+
                 if (!predictionData) {
                     console.log('No pre-computed prediction, calculating on-demand for:', targetIdString);
-                    
+
                     // Обчислюємо прогноз для цього ID динамічно
                     let predOrd = model.slope * targetIdNumeric + model.intercept;
-                    
+
                     const term3 = Math.pow(targetIdNumeric - weightedMeanX, 2) / weightedVarX;
                     const sePred = Math.sqrt(mseWeighted * (1 + 1/sumW + term3));
-                    
+
                     const margin90 = tScore90 * sePred;
                     const margin50 = tScore50 * sePred;
-                    
+
                     let l90_ord = predOrd - margin90;
                     let h90_ord = predOrd + margin90;
                     let l50_ord = predOrd - margin50;
                     let h50_ord = predOrd + margin50;
-                    
+
                     // Створюємо об'єкт з прогнозом
                     predictionData = {
                         y: targetIdNumeric,
                         id: targetIdString,  // STRING ID
                         x: fromOrdinal(predOrd)
                     };
-                    
+
                     // Додаємо до масивів для подальшого використання
                     const newL90 = { x: fromOrdinal(l90_ord), y: targetIdNumeric };
                     const newH90 = { x: fromOrdinal(h90_ord), y: targetIdNumeric };
                     const newL50 = { x: fromOrdinal(l50_ord), y: targetIdNumeric };
                     const newH50 = { x: fromOrdinal(h50_ord), y: targetIdNumeric };
-                    
+
                     allMeanData.push(predictionData);
                     allL90Data.push(newL90);
                     allH90Data.push(newH90);
                     allL50Data.push(newL50);
                     allH50Data.push(newH50);
                 }
-                
+
                 const nearest = predictionData;
-                
+
                 console.log('Using prediction:', nearest.y, '/', nearest.id);
-                
+
                 // Find matching bounds index
                 const idx = allMeanData.indexOf(nearest);
-                
+
                 // Check if this ID exists in Historical or Pre-booked data
                 let actualDate = null;
                 let actualType = null;
-                
+
                 // Check Historical (both regular and live queue) - exact string match
                 const histMatch = histData.find(d => d.id === targetIdString);
                 if (histMatch) {
@@ -834,16 +847,16 @@
                     const preBookedDataset = chart.data.datasets.find(ds => ds.label === 'Попередньо записані');
                     console.log('Checking pre-booked dataset:', preBookedDataset?.data?.length, 'points');
                     if (preBookedDataset && preBookedDataset.data) {
-                        console.log('Looking for:', targetIdString);                        
+                        console.log('Looking for:', targetIdString);
                         const preBookedMatch = preBookedDataset.data.find(d => d.id === targetIdString);
                         console.log('Pre-booked match:', preBookedMatch);
-                        
+
                         if (preBookedMatch) {
                             actualDate = preBookedMatch.x;
                             actualType = 'Запис на';
                         }
                     }
-                    
+
                     // Check Migrated - numeric match (migrated IDs are integers)
                     if (!actualDate) {
                         const migratedDataset = chart.data.datasets.find(ds => ds.label === 'Перенесені');
@@ -856,16 +869,16 @@
                         }
                     }
                 }
-                
+
                 if (idx !== -1) {
                     chart.frozen = true;
                     chart.options.plugins.tooltip.enabled = false;
-                    
+
                     // Знаходимо оригінальний string ID (first-class citizen)
                     // Якщо є в історичних даних - використовуємо actualIdOriginal
                     // Інакше конвертуємо numeric назад в string
                     const displayId = nearest.id;
-                    
+
                     chart.frozenData = {
                         id: nearest.y,
                         idDisplay: displayId,
@@ -900,11 +913,11 @@
                 },
                 afterInit: (chart) => {
                     chart.frozen = false;
-                    
+
                     // Track drag state to prevent click triggering on drag
                     let startX = 0;
                     let startY = 0;
-                    
+
                     chart.canvas.addEventListener('pointerdown', (e) => {
                         startX = e.clientX;
                         startY = e.clientY;
@@ -913,7 +926,7 @@
                     // Bind external input controls
                     const input = document.getElementById('queueInput');
                     const btn = document.getElementById('findBtn');
-                    
+
                     const handleSearch = () => {
                         const inputStr = input.value.trim();
                         if (!inputStr) return;
@@ -925,7 +938,7 @@
                         }
                         freezeAtId(chart, inputStr);
                     };
-                    
+
                     document.getElementById('resetZoomBtn').addEventListener('click', () => {
                         chart.resetZoom();
                     });
@@ -948,7 +961,7 @@
                             chart.pendingFreezeId = idParam;
                         }
                     }
-                    
+
                     // Handle click to freeze/unfreeze
                     chart.canvas.addEventListener('click', (e) => {
                         // Check distance
@@ -959,14 +972,14 @@
                             // Unfreeze
                             chart.frozen = false;
                             chart.options.plugins.tooltip.enabled = true; // Re-enable native
-                            
+
                             // Clear URL param
                             if (window.history.replaceState) {
                                 const url = new URL(window.location);
                                 url.searchParams.delete('id');
                                 window.history.replaceState({}, '', url);
                             }
-                            
+
                             // Remove custom guides
                             // We handle drawing in afterDraw, so just forcing update clears them
                             chart.update();
@@ -974,7 +987,7 @@
                             // Freeze
                             // Get data under cursor
                             const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false, axis: 'y' }, true);
-                            
+
                             if (points.length) {
                                 // Use the click Y value to find target
                                 const yValue = chart.scales.y.getValueForPixel(e.offsetY);
