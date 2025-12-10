@@ -4582,6 +4582,11 @@
     },
     {
       "date": "2025-12-10",
+      "id": "4380",
+      "is_live": true
+    },
+    {
+      "date": "2025-12-10",
       "id": "4404",
       "is_live": true
     },
@@ -4591,5 +4596,5 @@
       "is_live": true
     }
   ],
-  "total_points": 918
+  "total_points": 919
 }
