@@ -1,66 +1,6 @@
 {
   "attendance_points": [
     {
-      "date": "2025-07-31",
-      "id": "1680",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "1943",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "1989",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2059",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2090",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2150",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2168",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2170",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2176",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2181",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2193",
-      "is_live": false
-    },
-    {
-      "date": "2025-07-31",
-      "id": "2220",
-      "is_live": false
-    },
-    {
       "date": "2025-08-01",
       "id": "1763",
       "is_live": false
@@ -4483,6 +4423,66 @@
     {
       "date": "2025-12-17",
       "id": "4501",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4268",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4318",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4322",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4325",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4331",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4392",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4420",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4446",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4451",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4482",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4503",
+      "is_live": false
+    },
+    {
+      "date": "2025-12-18",
+      "id": "4515",
       "is_live": false
     }
   ],
