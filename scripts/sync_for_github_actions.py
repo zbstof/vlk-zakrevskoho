@@ -1,24 +1,34 @@
+#!/usr/bin/env python3
 """
 Скрипт для синхронізації даних в GitHub Actions.
 
 Використання:
-    python sync_for_github_actions.py              # Стандартний режим
-    python sync_for_github_actions.py --force-all  # Перезавантажити всі аркуші
+    python scripts/sync_for_github_actions.py              # Стандартний режим
+    python scripts/sync_for_github_actions.py --force-all  # Перезавантажити всі аркуші
 """
 
-import logging
 import argparse
+import logging
+import os
+import sys
+
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from daily_sheets_sync import sync_daily_sheets
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from vlk_bot.sync import sync_daily_sheets
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# немає config.ini у GitHub Actions, тому вказуємо properties тут
 STATS_SHEET_ID = '1d9OG-0b7wxxqrOujC9v6ikhjMKL2ei3wfrfaG61zSjA'
 STATS_WORKSHEET_NAME = 'Stats'
+# цей ключ створюється на льоту в GitHub Actions з секрету SERVICE_ACCOUNT_KEY
 SERVICE_ACCOUNT_KEY_PATH = 'service_account_key.json'
 SERVICE_ACCOUNT_SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+
 
 def main():
     parser = argparse.ArgumentParser(description='Синхронізація даних з Google Sheets')
@@ -52,6 +62,7 @@ def main():
     else:
         logger.error('Помилка синхронізації')
         return 1
+
 
 if __name__ == '__main__':
     exit(main())
