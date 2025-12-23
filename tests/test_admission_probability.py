@@ -11,7 +11,7 @@ from unittest.mock import patch, MagicMock
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import admission_probability as ap
+from scripts import admission_probability as ap
 
 
 class TestDataClasses:

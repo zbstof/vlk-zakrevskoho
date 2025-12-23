@@ -1,5 +1,5 @@
 """
-Тести для sync_for_github_actions.py
+Тести для scripts/sync_for_github_actions.py
 """
 
 import pytest
@@ -8,7 +8,7 @@ import sys
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import sync_for_github_actions
+from scripts import sync_for_github_actions
 
 
 class TestMain:
@@ -16,9 +16,9 @@ class TestMain:
         mock_creds = MagicMock()
         mock_service = MagicMock()
         
-        with patch('sync_for_github_actions.service_account.Credentials.from_service_account_file', return_value=mock_creds):
-            with patch('sync_for_github_actions.build', return_value=mock_service):
-                with patch('sync_for_github_actions.sync_daily_sheets', return_value=True):
+        with patch.object(sync_for_github_actions.service_account.Credentials, 'from_service_account_file', return_value=mock_creds):
+            with patch.object(sync_for_github_actions, 'build', return_value=mock_service):
+                with patch.object(sync_for_github_actions, 'sync_daily_sheets', return_value=True):
                     with patch('sys.argv', ['sync_for_github_actions.py']):
                         result = sync_for_github_actions.main()
         
@@ -28,9 +28,9 @@ class TestMain:
         mock_creds = MagicMock()
         mock_service = MagicMock()
         
-        with patch('sync_for_github_actions.service_account.Credentials.from_service_account_file', return_value=mock_creds):
-            with patch('sync_for_github_actions.build', return_value=mock_service):
-                with patch('sync_for_github_actions.sync_daily_sheets', return_value=False):
+        with patch.object(sync_for_github_actions.service_account.Credentials, 'from_service_account_file', return_value=mock_creds):
+            with patch.object(sync_for_github_actions, 'build', return_value=mock_service):
+                with patch.object(sync_for_github_actions, 'sync_daily_sheets', return_value=False):
                     with patch('sys.argv', ['sync_for_github_actions.py']):
                         result = sync_for_github_actions.main()
         
@@ -40,9 +40,9 @@ class TestMain:
         mock_creds = MagicMock()
         mock_service = MagicMock()
         
-        with patch('sync_for_github_actions.service_account.Credentials.from_service_account_file', return_value=mock_creds):
-            with patch('sync_for_github_actions.build', return_value=mock_service):
-                with patch('sync_for_github_actions.sync_daily_sheets', return_value=True) as mock_sync:
+        with patch.object(sync_for_github_actions.service_account.Credentials, 'from_service_account_file', return_value=mock_creds):
+            with patch.object(sync_for_github_actions, 'build', return_value=mock_service):
+                with patch.object(sync_for_github_actions, 'sync_daily_sheets', return_value=True) as mock_sync:
                     with patch('sys.argv', ['sync_for_github_actions.py', '--force-all']):
                         result = sync_for_github_actions.main()
         
@@ -55,9 +55,9 @@ class TestMain:
         mock_creds = MagicMock()
         mock_service = MagicMock()
         
-        with patch('sync_for_github_actions.service_account.Credentials.from_service_account_file', return_value=mock_creds) as mock_from_file:
-            with patch('sync_for_github_actions.build', return_value=mock_service):
-                with patch('sync_for_github_actions.sync_daily_sheets', return_value=True):
+        with patch.object(sync_for_github_actions.service_account.Credentials, 'from_service_account_file', return_value=mock_creds) as mock_from_file:
+            with patch.object(sync_for_github_actions, 'build', return_value=mock_service):
+                with patch.object(sync_for_github_actions, 'sync_daily_sheets', return_value=True):
                     with patch('sys.argv', ['sync_for_github_actions.py']):
                         sync_for_github_actions.main()
         
@@ -70,9 +70,9 @@ class TestMain:
         mock_creds = MagicMock()
         mock_service = MagicMock()
         
-        with patch('sync_for_github_actions.service_account.Credentials.from_service_account_file', return_value=mock_creds):
-            with patch('sync_for_github_actions.build', return_value=mock_service) as mock_build:
-                with patch('sync_for_github_actions.sync_daily_sheets', return_value=True):
+        with patch.object(sync_for_github_actions.service_account.Credentials, 'from_service_account_file', return_value=mock_creds):
+            with patch.object(sync_for_github_actions, 'build', return_value=mock_service) as mock_build:
+                with patch.object(sync_for_github_actions, 'sync_daily_sheets', return_value=True):
                     with patch('sys.argv', ['sync_for_github_actions.py']):
                         sync_for_github_actions.main()
         
@@ -82,9 +82,9 @@ class TestMain:
         mock_creds = MagicMock()
         mock_service = MagicMock()
         
-        with patch('sync_for_github_actions.service_account.Credentials.from_service_account_file', return_value=mock_creds):
-            with patch('sync_for_github_actions.build', return_value=mock_service):
-                with patch('sync_for_github_actions.sync_daily_sheets', return_value=True) as mock_sync:
+        with patch.object(sync_for_github_actions.service_account.Credentials, 'from_service_account_file', return_value=mock_creds):
+            with patch.object(sync_for_github_actions, 'build', return_value=mock_service):
+                with patch.object(sync_for_github_actions, 'sync_daily_sheets', return_value=True) as mock_sync:
                     with patch('sys.argv', ['sync_for_github_actions.py']):
                         sync_for_github_actions.main()
         
@@ -113,4 +113,3 @@ class TestModuleConstants:
     def test_service_account_scopes_defined(self):
         assert hasattr(sync_for_github_actions, 'SERVICE_ACCOUNT_SCOPES')
         assert 'https://www.googleapis.com/auth/spreadsheets.readonly' in sync_for_github_actions.SERVICE_ACCOUNT_SCOPES
-

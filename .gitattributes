@@ -1,3 +1,2 @@
-diagrams/*.png binary
 *.png binary
 *.csv text eol=lf
