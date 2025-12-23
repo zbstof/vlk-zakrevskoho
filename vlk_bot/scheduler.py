@@ -82,9 +82,9 @@ async def notify_status(context) -> None:
                 if target_date != '':
                     to_date = f" на <code>{target_date}</code>"
                     if prev_date != '':
-                        rmc = 'перенесення' 
+                        rmc = 'перенесення'
                     else:
-                           rmc = 'створення'
+                        rmc = 'створення'
                 else:
                     rmc = 'скасування'
                     to_date = ""

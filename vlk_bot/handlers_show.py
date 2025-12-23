@@ -91,11 +91,11 @@ async def show_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         date_text = match.group(0)
         try:
             if len(match.group(3)) == 2:
-                 chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%y").date()
+                chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%y").date()
             else:
-                 chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%Y").date()
+                chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%Y").date()
         except ValueError:
-             chosen_date = None
+            chosen_date = None
     else:
         date_text = date_input
         chosen_date = None

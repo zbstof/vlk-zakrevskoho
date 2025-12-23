@@ -1,0 +1,150 @@
+flowchart TB
+    subgraph scheduler ["Планувальник (APScheduler)"]
+        cron["check_new_daily_sheet<br/>Кожні 5 хв (15:00-21:00)"]
+    end
+
+    subgraph sheets_check ["Перевірка аркушів"]
+        check_sheets["get_sheets_list()<br/>Отримати список аркушів"]
+        find_sheet{"Знайдено аркуш<br/>наступного прийому?"}
+        wait_30["Чекати 30 хвилин<br/>після виявлення"]
+        already_sent{"Опитування<br/>вже надіслано?"}
+    end
+
+    subgraph send_poll ["Надсилання опитування"]
+        get_users["get_users_for_date_from_active_sheet()<br/>Отримати користувачів з Active sheet"]
+        send_msg["bot.send_message()<br/>Надіслати опитування кожному"]
+        poll_text["get_poll_text()<br/>Текст: ID, дата візиту"]
+        poll_kb["get_poll_keyboard()<br/>Клавіатура: 3 кнопки"]
+    end
+
+    subgraph poll_buttons ["Кнопки опитування"]
+        btn_confirm["Підтвердити візит"]
+        btn_reschedule["Перенести запис"]
+        btn_cancel["Скасувати запис"]
+    end
+
+    subgraph confirm_flow ["Підтвердження"]
+        confirm_handler["handle_poll_response()"]
+        update_status_confirm["update_active_sheet_status()<br/>Статус: 'Підтвердив візит'"]
+        save_confirm["save_status_state()<br/>confirmation: 'Підтверджено'"]
+        confirm_msg["Повідомлення: 'Дякуємо! Чекаємо вас'"]
+    end
+
+    subgraph reschedule_flow ["Перенесення"]
+        reschedule_handler["handle_poll_response()"]
+        calc_pred["calculate_prediction()<br/>Розрахувати прогноз дати"]
+        show_dates["date_inline_keyboard_from_prediction()<br/>Показати дати з ймовірностями"]
+        date_buttons["Inline кнопки з датами"]
+        other_date_btn["Кнопка: 'Інша дата'"]
+    end
+
+    subgraph date_selection ["Вибір дати"]
+        date_handler["handle_poll_date_selection()"]
+        save_new_date["save_queue_data()<br/>Зберегти новий запис"]
+        update_status_postpone["update_active_sheet_status()<br/>Статус: 'Відклав візит'"]
+        date_confirm_msg["Повідомлення: 'Перенесено на [дата]'"]
+    end
+
+    subgraph custom_date ["Введення власної дати"]
+        custom_handler["handle_poll_custom_date()"]
+        validate_format{"Валідація<br/>формату ДД.ММ.РРРР"}
+        validate_future{"Дата в<br/>майбутньому?"}
+        validate_weekday{"Робочий<br/>день?"}
+        calc_prob["calculate_prediction_with_daily_data()<br/>Розрахувати ймовірність"]
+        prob_warning{"Ймовірність<br/>низька або дата<br/>далека?"}
+        show_warning["Показати попередження<br/>та запитати підтвердження"]
+        save_custom["save_queue_data()<br/>Зберегти запис"]
+        notify_group["send_group_notification()<br/>Сповістити групу"]
+    end
+
+    subgraph cancel_flow ["Скасування"]
+        cancel_handler["handle_poll_response()"]
+        cancel_confirm_kb["Клавіатура підтвердження:<br/>'Так, скасувати' / 'Ні, передумав'"]
+    end
+
+    subgraph cancel_actions ["Дії скасування"]
+        cancel_actions_handler["handle_poll_cancel_actions()"]
+        cancel_yes["POLL_CANCEL_CONFIRM"]
+        cancel_no["POLL_CANCEL_ABORT"]
+        remove_queue["save_queue_data()<br/>Запис без дати"]
+        update_status_cancel["update_active_sheet_status()<br/>Статус: 'Скасував'"]
+        return_poll["Повернути меню опитування"]
+    end
+
+    %% Планувальник
+    cron --> check_sheets
+    check_sheets --> find_sheet
+    find_sheet -->|Ні| stop1["Очистити bot_data"]
+    find_sheet -->|Так| already_sent
+    already_sent -->|Так| stop2["Пропустити"]
+    already_sent -->|Ні| wait_30
+    wait_30 -->|30 хв минуло| get_users
+
+    %% Надсилання
+    get_users --> send_msg
+    send_msg --> poll_text
+    poll_text --> poll_kb
+    poll_kb --> btn_confirm
+    poll_kb --> btn_reschedule
+    poll_kb --> btn_cancel
+
+    %% Підтвердження
+    btn_confirm --> confirm_handler
+    confirm_handler --> update_status_confirm
+    update_status_confirm --> save_confirm
+    save_confirm --> confirm_msg
+
+    %% Перенесення
+    btn_reschedule --> reschedule_handler
+    reschedule_handler --> calc_pred
+    calc_pred --> show_dates
+    show_dates --> date_buttons
+    show_dates --> other_date_btn
+
+    date_buttons --> date_handler
+    date_handler --> save_new_date
+    save_new_date --> update_status_postpone
+    update_status_postpone --> date_confirm_msg
+
+    other_date_btn --> custom_handler
+    custom_handler --> validate_format
+    validate_format -->|Ні| error_format["Помилка: неправильний формат"]
+    validate_format -->|Так| validate_future
+    validate_future -->|Ні| error_future["Помилка: дата не в майбутньому"]
+    validate_future -->|Так| validate_weekday
+    validate_weekday -->|Ні| error_weekday["Помилка: вихідний день"]
+    validate_weekday -->|Так| calc_prob
+    calc_prob --> prob_warning
+    prob_warning -->|Так| show_warning
+    show_warning -->|Повторне введення| save_custom
+    prob_warning -->|Ні| save_custom
+    save_custom --> notify_group
+    notify_group --> date_confirm_msg
+
+    %% Скасування
+    btn_cancel --> cancel_handler
+    cancel_handler --> cancel_confirm_kb
+    cancel_confirm_kb --> cancel_actions_handler
+    cancel_actions_handler --> cancel_yes
+    cancel_actions_handler --> cancel_no
+    cancel_yes --> remove_queue
+    remove_queue --> update_status_cancel
+    update_status_cancel --> cancel_done["Повідомлення: 'Запис скасовано'"]
+    cancel_no --> return_poll
+    return_poll --> poll_kb
+
+    %% Стилі
+    classDef scheduler fill:#e1f5fe,stroke:#01579b
+    classDef handler fill:#fff3e0,stroke:#e65100
+    classDef action fill:#e8f5e9,stroke:#2e7d32
+    classDef decision fill:#fce4ec,stroke:#880e4f
+    classDef error fill:#ffebee,stroke:#c62828
+    classDef button fill:#f3e5f5,stroke:#4a148c
+
+    class cron scheduler
+    class confirm_handler,reschedule_handler,cancel_handler,date_handler,custom_handler,cancel_actions_handler handler
+    class update_status_confirm,save_confirm,save_new_date,update_status_postpone,remove_queue,update_status_cancel,save_custom,notify_group action
+    class find_sheet,already_sent,validate_format,validate_future,validate_weekday,prob_warning decision
+    class error_format,error_future,error_weekday error
+    class btn_confirm,btn_reschedule,btn_cancel,date_buttons,other_date_btn,cancel_confirm_kb button
+

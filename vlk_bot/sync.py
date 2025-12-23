@@ -172,7 +172,7 @@ def sync_daily_sheets(sheets_service, stats_sheet_id, stats_worksheet_name,
             return False
     else:
         stats_df = pd.read_csv(stats_file)
-        logger.debug(f"Використовуємо кешований stats")
+        logger.debug("Використовуємо кешований stats")
     
     sheets_to_download = []
     for _, row in stats_df.iterrows():
@@ -206,7 +206,7 @@ def sync_daily_sheets(sheets_service, stats_sheet_id, stats_worksheet_name,
                     
                     if date_obj < cutoff_date:
                         existing_sheets.add(sheet_name)
-                except:
+                except ValueError:
                     continue
         
         sheets_to_update = [s for s in sheets_to_download if s not in existing_sheets]
@@ -359,7 +359,7 @@ def get_historical_attendance_data():
     for filename in files:
         try:
             date_obj = datetime.datetime.strptime(filename[:-4], "%Y-%m-%d").date()
-        except:
+        except ValueError:
             continue
         
         filepath = os.path.join(DAILY_SHEETS_CACHE_DIR, filename)
@@ -436,7 +436,7 @@ def generate_attendance_json(output_file='attendance_data.json'):
         try:
             file_date_obj = datetime.datetime.strptime(filename[:-4], "%Y-%m-%d").date()
             sheet_name = file_date_obj.strftime("%d.%m.%Y")
-        except:
+        except ValueError:
             continue
         
         if sheet_name not in sheet_to_date:

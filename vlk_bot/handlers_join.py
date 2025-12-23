@@ -193,9 +193,9 @@ async def join_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         if match_full:
             date_text = match_full.group(0)
             if len(match_full.group(3)) == 2:
-                 chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%y").date()
+                chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%y").date()
             else:
-                 chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%Y").date()
+                chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%Y").date()
         else:
             raise ValueError()
 
@@ -291,8 +291,8 @@ async def join_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                     try:
                         example_prob = calculate_date_probability(example_date, dist)
                         example_prob_str = f"{example_prob:.0f}%"
-                    except Exception as e:
-                            example_prob_str = ""
+                    except Exception:
+                        example_prob_str = ""
 
                     warn_msg = (
                         f"⚠️ *Попередження:* Обрана дата `{chosen_date.strftime('%d.%m.%Y')}` *занадто далеко в майбутньому*. "

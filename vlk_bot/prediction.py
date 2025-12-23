@@ -85,7 +85,7 @@ def calculate_prediction_from_attendance_json(user_id, attendance_data):
                 'ordinal': ordinal,
                 'is_live': point.get('is_live', False)
             })
-        except:
+        except (ValueError, KeyError, TypeError):
             continue
     
     if len(processed_points) < 5:

@@ -156,10 +156,10 @@ async def handle_poll_cancel_actions(update: Update, context: ContextTypes.DEFAU
             )
         else:
             await query.edit_message_text(
-                f"Помилка при скасуванні запису. Спробуйте пізніше.",
+                "Помилка при скасуванні запису. Спробуйте пізніше.",
                 parse_mode="HTML"
             )
-            
+
     elif action == POLL_CANCEL_ABORT:
         next_sheet = context.bot_data.get('next_reception_sheet', 'невідома дата')
         await query.edit_message_text(
@@ -252,7 +252,7 @@ async def handle_poll_date_selection(update: Update, context: ContextTypes.DEFAU
         )
     else:
         await query.edit_message_text(
-            f"Помилка при перенесенні запису. Спробуйте пізніше.",
+            "Помилка при перенесенні запису. Спробуйте пізніше.",
             parse_mode="HTML"
         )
 
@@ -338,7 +338,7 @@ async def handle_poll_custom_date(update: Update, context: ContextTypes.DEFAULT_
                             prob_mean = calculate_date_probability(prediction['mean'], dist)
                             prob_h90 = calculate_date_probability(prediction['h90'], dist)
                             range_info = f"<code>{prediction['mean'].strftime('%d.%m.%Y')}</code> ({prob_mean:.0f}%) - <code>{prediction['h90'].strftime('%d.%m.%Y')}</code> ({prob_h90:.0f}%)"
-                        except:
+                        except Exception:
                             range_info = f"<code>{prediction['mean'].strftime('%d.%m.%Y')}</code> - <code>{prediction['h90'].strftime('%d.%m.%Y')}</code>"
                         
                         warn_msg = (
@@ -359,7 +359,7 @@ async def handle_poll_custom_date(update: Update, context: ContextTypes.DEFAULT_
                                 prob_mean = calculate_date_probability(prediction['mean'], dist)
                                 prob_h90 = calculate_date_probability(prediction['h90'], dist)
                                 range_info = f"<code>{prediction['mean'].strftime('%d.%m.%Y')}</code> ({prob_mean:.0f}%) - <code>{prediction['h90'].strftime('%d.%m.%Y')}</code> ({prob_h90:.0f}%)"
-                            except:
+                            except Exception:
                                 range_info = f"<code>{prediction['mean'].strftime('%d.%m.%Y')}</code> - <code>{prediction['h90'].strftime('%d.%m.%Y')}</code>"
                             
                             warn_msg = (

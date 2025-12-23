@@ -72,7 +72,7 @@ def load_queue_data() -> pd.DataFrame | None:
             logger.warning("Google Sheet порожній. Ініціалізація заголовків.")
             return pd.DataFrame(columns=REQUIRED_COLUMNS)
 
-        columns = values[0]
+        # Перший рядок - заголовки (ігноруємо, використовуємо REQUIRED_COLUMNS)
         data = values[1:]
 
         expected_num_columns = len(REQUIRED_COLUMNS)
@@ -157,7 +157,7 @@ def save_queue_data_full(df: pd.DataFrame) -> bool:
         logger.info(f"Google Sheet '{SHEET_NAME}' було очищено перед записом.")
 
         if df.empty:
-            logger.info(f"DataFrame для запису порожній, записано лише заголовки.")
+            logger.info("DataFrame для запису порожній, записано лише заголовки.")
             body = {'values': [REQUIRED_COLUMNS]}
             _execute_with_retry(
                 "save_queue_data_full.headers",
@@ -287,9 +287,9 @@ def update_active_sheet_status(user_id: str, new_status: str) -> bool:
         
         values = result.get('values', [])
         if not values:
-            logger.warning(f"Active sheet порожній")
+            logger.warning("Active sheet порожній")
             return False
-        
+
         row_index = None
         for i, row in enumerate(values):
             if len(row) >= 2 and str(row[1]).strip() == str(user_id).strip():
@@ -373,9 +373,9 @@ def delete_row_from_active_sheet(user_id: str) -> bool:
         
         values = result.get('values', [])
         if not values:
-            logger.warning(f"Active sheet порожній")
+            logger.warning("Active sheet порожній")
             return False
-        
+
         row_index = None
         for i, row in enumerate(values):
             if len(row) >= 2 and str(row[1]).strip() == str(user_id).strip():

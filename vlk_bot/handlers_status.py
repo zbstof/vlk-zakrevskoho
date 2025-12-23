@@ -101,23 +101,23 @@ async def status_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                     prob = calculate_date_probability(record_date, dist)
                     status_message += f"*Орієнтовна ймовірність зайти в 252 кабінет і розпочати ВЛК:* `{prob:.0f}%`\n"
         except Exception as e:
-             logger.error(f"Помилка при розрахунку ймовірності в status_get_id: {e}")
+            logger.error(f"Помилка при розрахунку ймовірності в status_get_id: {e}")
 
         if latest_record['Попередня дата'].strip():
             status_message += f"**Перенесено з дати:** `{latest_record['Попередня дата']}`\n"
     else:
-        status_message += f"**Дата:** `скасування запису`\n"
+        status_message += "**Дата:** `скасування запису`\n"
         status_message += f"**Поточний статус:** `{latest_record['Статус'] if latest_record['Статус'].strip() else 'Невизначений'}`\n"
         if latest_record['Попередня дата'].strip():
             status_message += f"**Скасовано запис від:** `{latest_record['Попередня дата']}`\n"
-    
+
     if latest_record['Статус'].strip().lower() == 'ухвалено':
-       status_message += f"Вашу заявку ухвалено.\nВона вже або через деякий час з'явиться в жовтій таблиці 🟡TODO."
+        status_message += "Вашу заявку ухвалено.\nВона вже або через деякий час з'явиться в жовтій таблиці 🟡TODO."
     elif latest_record['Статус'].strip().lower() == 'на розгляді':
-       status_message += f"Ваша заявка на розгляді у адміністраторів.\nЯкщо вона буде \"Ухвалена\", то через деякий час з'явиться в жовтій таблиці 🟡TODO."
+        status_message += "Ваша заявка на розгляді у адміністраторів.\nЯкщо вона буде \"Ухвалена\", то через деякий час з'явиться в жовтій таблиці 🟡TODO."
     else:
-       status_message += f"Примітка:\nСхоже з вашою заявкою виникли проблеми.\nЗверніться до адміністраторів в групі [ВЛК Закревського 81](https://t.me/vlkzakrevskogo81) за роз'ясненнями."
-  
+        status_message += "Примітка:\nСхоже з вашою заявкою виникли проблеми.\nЗверніться до адміністраторів в групі [ВЛК Закревського 81](https://t.me/vlkzakrevskogo81) за роз'ясненнями."
+
     logger.info(f"Користувач {get_user_log_info(update.effective_user)} переглянув статус для ID: {id_to_check}.")
     await update.message.reply_text(status_message, parse_mode='Markdown', reply_markup=MAIN_KEYBOARD)
     context.user_data.clear()
