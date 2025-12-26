@@ -187,15 +187,18 @@ async def join_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     user_notes = context.user_data.get('user_notes', '')
     telegram_user_data = context.user_data.get('telegram_user_data')
 
-    match_full = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})', date_input)
+    #match_full = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})', date_input)
+    match_full = re.search(r'(\d{1,2})\W(\d{1,2})\W(\d{4}|\d{2})', date_input)
     
     try:
         if match_full:
-            date_text = match_full.group(0)
+            #date_text = match_full.group(0)
             if len(match_full.group(3)) == 2:
-                 chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%y").date()
+                 #chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%y").date()
+                 chosen_date = datetime.datetime.strptime(match_full.group(1) + '.' + match_full.group(2) + '.' + match_full.group(3), "%d.%m.%y").date()
             else:
-                 chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%Y").date()
+                 #chosen_date = datetime.datetime.strptime(date_text, "%d.%m.%Y").date()
+                 chosen_date = datetime.datetime.strptime(match_full.group(1) + '.' + match_full.group(2) + '.' + match_full.group(3), "%d.%m.%Y").date()
         else:
             raise ValueError()
 
@@ -332,7 +335,7 @@ async def join_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         else:
             notification_text = f"✅ Користувач {update.effective_user.mention_html()}\nстворив запис для\nID <code>{user_id}</code> на <code>{chosen_date.strftime('%d.%m.%Y')}</code>" 
         await send_group_notification(context, notification_text)
-        message_text = f"Ви успішно створили заявку на запис/перенос дати в черзі!\nВаш ID: `{user_id}`, Обрана дата: `{chosen_date.strftime('%d.%m.%Y')}`\nСтатус заявки: `На розгляді`\nВаша заявка на розгляді у адміністраторів.\nЯкщо вона буде \"Ухвалена\", то через деякий час з'явиться в жовтій таблиці 🟡TODO."
+        message_text = f"Ви успішно створили заявку на запис/перенесння дати в черзі!\nВаш ID: `{user_id}`, Обрана дата: `{chosen_date.strftime('%d.%m.%Y')}`\nСтатус заявки: `На розгляді`\nВаша заявка на розгляді у адміністраторів.\nЯкщо вона буде \"Ухвалена\", то через деякий час з'явиться в жовтій таблиці 🟡TODO."
         await update.message.reply_text(message_text, parse_mode='Markdown', reply_markup=MAIN_KEYBOARD)
         logger.info(f"Запис користувача {get_user_log_info(update.effective_user)} (ID: {user_id}) оновлено/додано на дату: {chosen_date.strftime('%d.%m.%Y')}. Попередня дата: {previous_state if previous_state else 'новий запис'}")
         context.user_data.clear()
