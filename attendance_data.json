@@ -4512,9 +4512,14 @@
     },
     {
       "date": "2025-12-29",
+      "id": "4836",
+      "is_live": true
+    },
+    {
+      "date": "2025-12-29",
       "id": "5527",
       "is_live": true
     }
   ],
-  "total_points": 903
+  "total_points": 904
 }
