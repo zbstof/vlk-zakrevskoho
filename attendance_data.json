@@ -4519,7 +4519,12 @@
       "date": "2025-12-29",
       "id": "5527",
       "is_live": true
+    },
+    {
+      "date": "2025-12-29",
+      "id": "4284",
+      "is_live": true
     }
   ],
-  "total_points": 904
+  "total_points": 905
 }
