@@ -1,41 +1,6 @@
 {
   "attendance_points": [
     {
-      "date": "2025-09-04",
-      "id": "1687",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-04",
-      "id": "2463",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-04",
-      "id": "2642",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-04",
-      "id": "2779",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-04",
-      "id": "2789",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-04",
-      "id": "2797",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-04",
-      "id": "2798",
-      "is_live": false
-    },
-    {
       "date": "2025-09-05",
       "id": "2659",
       "is_live": false
@@ -4564,7 +4529,72 @@
       "date": "2026-01-21",
       "id": "5755",
       "is_live": true
+    },
+    {
+      "date": "2026-01-22",
+      "id": "4646",
+      "is_live": false
+    },
+    {
+      "date": "2026-01-22",
+      "id": "4718",
+      "is_live": false
+    },
+    {
+      "date": "2026-01-22",
+      "id": "4832",
+      "is_live": false
+    },
+    {
+      "date": "2026-01-22",
+      "id": "4921",
+      "is_live": false
+    },
+    {
+      "date": "2026-01-22",
+      "id": "4964",
+      "is_live": false
+    },
+    {
+      "date": "2026-01-22",
+      "id": "5068",
+      "is_live": false
+    },
+    {
+      "date": "2026-01-22",
+      "id": "5335",
+      "is_live": false
+    },
+    {
+      "date": "2026-01-22",
+      "id": "5364",
+      "is_live": false
+    },
+    {
+      "date": "2026-01-22",
+      "id": "5582",
+      "is_live": true
+    },
+    {
+      "date": "2026-01-22",
+      "id": "5768",
+      "is_live": true
+    },
+    {
+      "date": "2026-01-22",
+      "id": "5805",
+      "is_live": true
+    },
+    {
+      "date": "2026-01-22",
+      "id": "5810",
+      "is_live": true
+    },
+    {
+      "date": "2026-01-22",
+      "id": "5811",
+      "is_live": true
     }
   ],
-  "total_points": 913
+  "total_points": 919
 }
