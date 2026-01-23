@@ -4559,7 +4559,12 @@
       "date": "2026-01-23",
       "id": "5846",
       "is_live": true
+    },
+    {
+      "date": "2026-01-23",
+      "id": "5859",
+      "is_live": true
     }
   ],
-  "total_points": 912
+  "total_points": 913
 }
