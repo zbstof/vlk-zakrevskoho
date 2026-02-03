@@ -1,66 +1,6 @@
 {
   "attendance_points": [
     {
-      "date": "2025-09-16",
-      "id": "2834",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "2916",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "2993",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3008",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3019",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3020",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3030",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3109",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3143",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3147",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3155",
-      "is_live": false
-    },
-    {
-      "date": "2025-09-16",
-      "id": "3169",
-      "is_live": false
-    },
-    {
       "date": "2025-09-17",
       "id": "2871",
       "is_live": false
@@ -4674,7 +4614,57 @@
       "date": "2026-02-02",
       "id": "5979/1",
       "is_live": true
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5113",
+      "is_live": false
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5171",
+      "is_live": false
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5239",
+      "is_live": false
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5271",
+      "is_live": false
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5801",
+      "is_live": true
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5856",
+      "is_live": true
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5864",
+      "is_live": true
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5888",
+      "is_live": true
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5934",
+      "is_live": true
+    },
+    {
+      "date": "2026-02-03",
+      "id": "5938",
+      "is_live": true
     }
   ],
-  "total_points": 935
+  "total_points": 933
 }
