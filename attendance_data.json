@@ -4694,7 +4694,12 @@
       "date": "2026-02-09",
       "id": "5943",
       "is_live": true
+    },
+    {
+      "date": "2026-02-09",
+      "id": "5945",
+      "is_live": true
     }
   ],
-  "total_points": 939
+  "total_points": 940
 }
