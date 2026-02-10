@@ -4677,11 +4677,6 @@
     },
     {
       "date": "2026-02-10",
-      "id": "5315",
-      "is_live": false
-    },
-    {
-      "date": "2026-02-10",
       "id": "5454",
       "is_live": false
     },
@@ -4706,5 +4701,5 @@
       "is_live": true
     }
   ],
-  "total_points": 941
+  "total_points": 940
 }
