@@ -4824,7 +4824,32 @@
       "date": "2026-02-26",
       "id": "5671",
       "is_live": false
+    },
+    {
+      "date": "2026-02-27",
+      "id": "5520",
+      "is_live": false
+    },
+    {
+      "date": "2026-02-27",
+      "id": "5548",
+      "is_live": false
+    },
+    {
+      "date": "2026-02-27",
+      "id": "5674",
+      "is_live": false
+    },
+    {
+      "date": "2026-02-27",
+      "id": "5678",
+      "is_live": false
+    },
+    {
+      "date": "2026-02-27",
+      "id": "5679",
+      "is_live": false
     }
   ],
-  "total_points": 965
+  "total_points": 970
 }
