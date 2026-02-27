@@ -4737,11 +4737,6 @@
     },
     {
       "date": "2026-02-25",
-      "id": "5551",
-      "is_live": false
-    },
-    {
-      "date": "2026-02-25",
       "id": "5593",
       "is_live": false
     },
@@ -4831,5 +4826,5 @@
       "is_live": false
     }
   ],
-  "total_points": 966
+  "total_points": 965
 }
