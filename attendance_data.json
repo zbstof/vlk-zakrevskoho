@@ -4963,23 +4963,33 @@
     {
       "date": "2026-03-04",
       "id": "6127",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-04",
       "id": "6133",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-04",
       "id": "6150",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-04",
       "id": "6152",
-      "is_live": false
+      "is_live": true
+    },
+    {
+      "date": "2026-03-04",
+      "id": "6156",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-04",
+      "id": "6158",
+      "is_live": true
     }
   ],
-  "total_points": 996
+  "total_points": 998
 }
