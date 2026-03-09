@@ -5007,9 +5007,14 @@
     },
     {
       "date": "2026-03-06",
+      "id": "6177",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-06",
       "id": "6189",
       "is_live": true
     }
   ],
-  "total_points": 1002
+  "total_points": 1003
 }
