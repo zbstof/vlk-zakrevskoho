@@ -1,51 +1,6 @@
 {
   "attendance_points": [
     {
-      "date": "2025-10-21",
-      "id": "3241",
-      "is_live": false
-    },
-    {
-      "date": "2025-10-21",
-      "id": "3356",
-      "is_live": false
-    },
-    {
-      "date": "2025-10-21",
-      "id": "3541",
-      "is_live": false
-    },
-    {
-      "date": "2025-10-21",
-      "id": "3545",
-      "is_live": false
-    },
-    {
-      "date": "2025-10-21",
-      "id": "3549",
-      "is_live": false
-    },
-    {
-      "date": "2025-10-21",
-      "id": "3552",
-      "is_live": false
-    },
-    {
-      "date": "2025-10-21",
-      "id": "3555",
-      "is_live": false
-    },
-    {
-      "date": "2025-10-21",
-      "id": "3564",
-      "is_live": false
-    },
-    {
-      "date": "2025-10-21",
-      "id": "3573",
-      "is_live": false
-    },
-    {
       "date": "2025-10-22",
       "id": "3526",
       "is_live": false
@@ -5044,7 +4999,62 @@
       "date": "2026-03-06",
       "id": "6197",
       "is_live": true
+    },
+    {
+      "date": "2026-03-06",
+      "id": "4641",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-06",
+      "id": "5091",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-06",
+      "id": "5466",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-06",
+      "id": "5473",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-06",
+      "id": "5517",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-06",
+      "id": "5792",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-06",
+      "id": "5797",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-06",
+      "id": "5804",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-06",
+      "id": "6162",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-06",
+      "id": "6192",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-06",
+      "id": "6198",
+      "is_live": true
     }
   ],
-  "total_points": 1009
+  "total_points": 1011
 }
