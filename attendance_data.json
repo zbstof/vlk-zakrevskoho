@@ -5058,37 +5058,37 @@
     {
       "date": "2026-03-13",
       "id": "5993",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-13",
       "id": "6141",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-13",
       "id": "6225",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-13",
       "id": "6231",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-13",
       "id": "6238",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-13",
       "id": "6240",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-13",
       "id": "6249",
-      "is_live": false
+      "is_live": true
     }
   ],
   "total_points": 1018
