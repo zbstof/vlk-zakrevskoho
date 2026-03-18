@@ -5179,7 +5179,12 @@
       "date": "2026-03-18",
       "id": "6279",
       "is_live": true
+    },
+    {
+      "date": "2026-03-18",
+      "id": "6289",
+      "is_live": true
     }
   ],
-  "total_points": 1036
+  "total_points": 1037
 }
