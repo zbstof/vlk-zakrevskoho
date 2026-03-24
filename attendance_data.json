@@ -1,81 +1,6 @@
 {
   "attendance_points": [
     {
-      "date": "2025-11-04",
-      "id": "3693",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3773",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3811",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3819",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3822",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3825",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3903",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3906",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3926",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "3944",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "4013",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-04",
-      "id": "4043",
-      "is_live": true
-    },
-    {
-      "date": "2025-11-04",
-      "id": "4092",
-      "is_live": true
-    },
-    {
-      "date": "2025-11-04",
-      "id": "4184",
-      "is_live": true
-    },
-    {
-      "date": "2025-11-04",
-      "id": "4552",
-      "is_live": true
-    },
-    {
       "date": "2025-11-05",
       "id": "3658",
       "is_live": false
@@ -5183,6 +5108,81 @@
     {
       "date": "2026-03-23",
       "id": "6310",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5044",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5192",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5633",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5707",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5845",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5872",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5882",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5889",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5921",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5962",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-24",
+      "id": "5984",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-24",
+      "id": "6263",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-24",
+      "id": "6311",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-24",
+      "id": "6313",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-24",
+      "id": "6314",
       "is_live": true
     }
   ],
