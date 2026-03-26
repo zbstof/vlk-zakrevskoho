@@ -5244,7 +5244,12 @@
       "date": "2026-03-26",
       "id": "6362",
       "is_live": true
+    },
+    {
+      "date": "2026-03-26",
+      "id": "6367",
+      "is_live": true
     }
   ],
-  "total_points": 1049
+  "total_points": 1050
 }
