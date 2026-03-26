@@ -1,41 +1,6 @@
 {
   "attendance_points": [
     {
-      "date": "2025-11-06",
-      "id": "3154",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-06",
-      "id": "3673",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-06",
-      "id": "3730",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-06",
-      "id": "3731",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-06",
-      "id": "3760",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-06",
-      "id": "3771",
-      "is_live": false
-    },
-    {
-      "date": "2025-11-06",
-      "id": "3785",
-      "is_live": false
-    },
-    {
       "date": "2025-11-07",
       "id": "3676",
       "is_live": false
@@ -5229,7 +5194,37 @@
       "date": "2026-03-25",
       "id": "6333",
       "is_live": true
+    },
+    {
+      "date": "2026-03-26",
+      "id": "4922",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-26",
+      "id": "5423",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-26",
+      "id": "5836",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-26",
+      "id": "5844",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-26",
+      "id": "5849",
+      "is_live": false
+    },
+    {
+      "date": "2026-03-26",
+      "id": "6322",
+      "is_live": true
     }
   ],
-  "total_points": 1046
+  "total_points": 1045
 }
