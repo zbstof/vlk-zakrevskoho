@@ -5238,12 +5238,12 @@
     {
       "date": "2026-03-27",
       "id": "6138",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-27",
       "id": "6336",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-27",
@@ -5259,7 +5259,12 @@
       "date": "2026-03-27",
       "id": "6354",
       "is_live": true
+    },
+    {
+      "date": "2026-03-27",
+      "id": "6384",
+      "is_live": true
     }
   ],
-  "total_points": 1052
+  "total_points": 1053
 }
