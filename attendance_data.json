@@ -5247,14 +5247,19 @@
     },
     {
       "date": "2026-03-27",
+      "id": "6341",
+      "is_live": true
+    },
+    {
+      "date": "2026-03-27",
       "id": "6345",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-03-27",
       "id": "6354",
-      "is_live": false
+      "is_live": true
     }
   ],
-  "total_points": 1051
+  "total_points": 1052
 }
