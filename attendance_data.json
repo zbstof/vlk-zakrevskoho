@@ -5352,9 +5352,14 @@
     },
     {
       "date": "2026-04-07",
+      "id": "6458",
+      "is_live": true
+    },
+    {
+      "date": "2026-04-07",
       "id": "6460",
       "is_live": true
     }
   ],
-  "total_points": 1071
+  "total_points": 1072
 }
