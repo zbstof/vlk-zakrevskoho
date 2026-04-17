@@ -1,36 +1,6 @@
 {
   "attendance_points": [
     {
-      "date": "2025-12-01",
-      "id": "3560",
-      "is_live": false
-    },
-    {
-      "date": "2025-12-01",
-      "id": "4017",
-      "is_live": false
-    },
-    {
-      "date": "2025-12-01",
-      "id": "4062",
-      "is_live": false
-    },
-    {
-      "date": "2025-12-01",
-      "id": "4081",
-      "is_live": false
-    },
-    {
-      "date": "2025-12-01",
-      "id": "4113",
-      "is_live": false
-    },
-    {
-      "date": "2025-12-01",
-      "id": "4118",
-      "is_live": false
-    },
-    {
       "date": "2025-12-03",
       "id": "3993",
       "is_live": false
@@ -5666,5 +5636,5 @@
       "is_live": true
     }
   ],
-  "total_points": 1133
+  "total_points": 1127
 }
