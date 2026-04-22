@@ -1,26 +1,6 @@
 {
   "attendance_points": [
     {
-      "date": "2025-12-03",
-      "id": "3993",
-      "is_live": false
-    },
-    {
-      "date": "2025-12-03",
-      "id": "4051",
-      "is_live": false
-    },
-    {
-      "date": "2025-12-03",
-      "id": "4094",
-      "is_live": false
-    },
-    {
-      "date": "2025-12-03",
-      "id": "4096",
-      "is_live": false
-    },
-    {
       "date": "2025-12-04",
       "id": "3707",
       "is_live": false
@@ -5719,7 +5699,87 @@
       "date": "2026-04-21",
       "id": "6574",
       "is_live": true
+    },
+    {
+      "date": "2026-04-22",
+      "id": "5040",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "5894",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6039",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6351",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6405",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6475",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6556",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6562",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6578",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6580",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6581",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6583",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6584",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6587",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6612",
+      "is_live": true
+    },
+    {
+      "date": "2026-04-22",
+      "id": "6619",
+      "is_live": true
     }
   ],
-  "total_points": 1144
+  "total_points": 1156
 }
