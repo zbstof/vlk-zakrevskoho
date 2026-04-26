@@ -5844,7 +5844,12 @@
       "date": "2026-04-24",
       "id": "6646",
       "is_live": true
+    },
+    {
+      "date": "2026-04-24",
+      "id": "6659",
+      "is_live": true
     }
   ],
-  "total_points": 1169
+  "total_points": 1170
 }
