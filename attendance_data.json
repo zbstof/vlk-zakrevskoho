@@ -5857,6 +5857,11 @@
     },
     {
       "date": "2026-04-27",
+      "id": "6092",
+      "is_live": false
+    },
+    {
+      "date": "2026-04-27",
       "id": "6114",
       "is_live": false
     },
@@ -5873,22 +5878,22 @@
     {
       "date": "2026-04-27",
       "id": "6654",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-27",
       "id": "6655",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-27",
       "id": "6657",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-27",
       "id": "6662",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-27",
@@ -5901,5 +5906,5 @@
       "is_live": true
     }
   ],
-  "total_points": 1180
+  "total_points": 1181
 }
