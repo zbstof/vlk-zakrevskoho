@@ -5903,32 +5903,32 @@
     {
       "date": "2026-04-29",
       "id": "6688",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-29",
       "id": "6690",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-29",
       "id": "6691",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-29",
       "id": "6693",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-29",
       "id": "6697",
-      "is_live": true
+      "is_live": false
     },
     {
       "date": "2026-04-29",
       "id": "6698",
-      "is_live": true
+      "is_live": false
     }
   ],
   "total_points": 1186
