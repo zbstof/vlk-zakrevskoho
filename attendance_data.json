@@ -5959,7 +5959,57 @@
       "date": "2026-05-01",
       "id": "6746",
       "is_live": true
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6166",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6544",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6696",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6704",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6705",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6707",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6710",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6726",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6727",
+      "is_live": false
+    },
+    {
+      "date": "2026-05-04",
+      "id": "6728",
+      "is_live": false
     }
   ],
-  "total_points": 1192
+  "total_points": 1202
 }
