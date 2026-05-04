@@ -5957,6 +5957,11 @@
     },
     {
       "date": "2026-05-01",
+      "id": "6744",
+      "is_live": true
+    },
+    {
+      "date": "2026-05-01",
       "id": "6746",
       "is_live": true
     },
@@ -6011,5 +6016,5 @@
       "is_live": false
     }
   ],
-  "total_points": 1202
+  "total_points": 1203
 }
