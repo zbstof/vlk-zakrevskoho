@@ -6019,7 +6019,12 @@
       "date": "2026-05-05",
       "id": "6759",
       "is_live": false
+    },
+    {
+      "date": "2026-05-05",
+      "id": "6776",
+      "is_live": true
     }
   ],
-  "total_points": 1204
+  "total_points": 1205
 }
