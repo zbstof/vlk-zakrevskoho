@@ -6027,9 +6027,14 @@
     },
     {
       "date": "2026-05-05",
+      "id": "6774",
+      "is_live": true
+    },
+    {
+      "date": "2026-05-05",
       "id": "6776",
       "is_live": true
     }
   ],
-  "total_points": 1206
+  "total_points": 1207
 }
