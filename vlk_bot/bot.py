@@ -3,6 +3,7 @@
 """
 
 import logging
+import asyncio
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pytz import timezone
@@ -145,7 +146,8 @@ def main() -> None:
 
     if ENVIRONMENT != "test":
         kyiv_tz = timezone('Europe/Kyiv')
-        scheduler = AsyncIOScheduler(timezone=kyiv_tz)
+        loop = asyncio.get_event_loop()
+        scheduler = AsyncIOScheduler(event_loop=loop, timezone=kyiv_tz)
         
         scheduler.add_job(
             notify_status,
