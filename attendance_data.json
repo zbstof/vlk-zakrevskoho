@@ -10164,7 +10164,72 @@
       "date": "2026-06-02",
       "id": "7058",
       "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7053",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7071",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7072",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7073",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7074",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7075",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7076",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7077",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7079",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7080",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7081",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7082",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-03",
+      "id": "7084",
+      "is_live": true
     }
   ],
-  "total_points": 2033
+  "total_points": 2046
 }
