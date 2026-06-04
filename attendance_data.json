@@ -10229,7 +10229,27 @@
       "date": "2026-06-03",
       "id": "7084",
       "is_live": true
+    },
+    {
+      "date": "2026-06-04",
+      "id": "6922",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-04",
+      "id": "6990",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-04",
+      "id": "7091",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-04",
+      "id": "7092",
+      "is_live": false
     }
   ],
-  "total_points": 2046
+  "total_points": 2050
 }
