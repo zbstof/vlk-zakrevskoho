@@ -10649,7 +10649,12 @@
       "date": "2026-06-15",
       "id": "7223",
       "is_live": true
+    },
+    {
+      "date": "2026-06-15",
+      "id": "7226",
+      "is_live": true
     }
   ],
-  "total_points": 2130
+  "total_points": 2131
 }
