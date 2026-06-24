@@ -10979,7 +10979,32 @@
       "date": "2026-06-23",
       "id": "7310",
       "is_live": true
+    },
+    {
+      "date": "2026-06-24",
+      "id": "7295",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-24",
+      "id": "7296",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-24",
+      "id": "7302",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-24",
+      "id": "7322",
+      "is_live": true
+    },
+    {
+      "date": "2026-06-24",
+      "id": "7325",
+      "is_live": true
     }
   ],
-  "total_points": 2196
+  "total_points": 2201
 }
