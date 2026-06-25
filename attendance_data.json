@@ -11004,7 +11004,17 @@
       "date": "2026-06-24",
       "id": "7325",
       "is_live": true
+    },
+    {
+      "date": "2026-06-25",
+      "id": "6923",
+      "is_live": false
+    },
+    {
+      "date": "2026-06-25",
+      "id": "7332",
+      "is_live": true
     }
   ],
-  "total_points": 2201
+  "total_points": 2203
 }
