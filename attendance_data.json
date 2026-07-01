@@ -11149,7 +11149,17 @@
       "date": "2026-07-01",
       "id": "7386",
       "is_live": false
+    },
+    {
+      "date": "2026-07-01",
+      "id": "7397",
+      "is_live": true
+    },
+    {
+      "date": "2026-07-01",
+      "id": "7408",
+      "is_live": true
     }
   ],
-  "total_points": 2230
+  "total_points": 2232
 }
