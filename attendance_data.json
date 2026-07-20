@@ -11734,7 +11734,12 @@
       "date": "2026-07-16",
       "id": "7548",
       "is_live": false
+    },
+    {
+      "date": "2026-07-16",
+      "id": "7552",
+      "is_live": true
     }
   ],
-  "total_points": 2347
+  "total_points": 2348
 }
