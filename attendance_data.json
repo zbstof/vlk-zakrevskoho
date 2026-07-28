@@ -12213,27 +12213,27 @@
     {
       "date": "2026-07-28",
       "id": "7707",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-07-28",
       "id": "7708",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-07-28",
       "id": "7710",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-07-28",
       "id": "7712",
-      "is_live": false
+      "is_live": true
     },
     {
       "date": "2026-07-28",
       "id": "7722",
-      "is_live": false
+      "is_live": true
     }
   ],
   "total_points": 2447
