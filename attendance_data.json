@@ -13032,11 +13032,6 @@
     },
     {
       "date": "2026-08-14",
-      "id": "7945",
-      "is_live": false
-    },
-    {
-      "date": "2026-08-14",
       "id": "7950",
       "is_live": true
     },
@@ -13051,5 +13046,5 @@
       "is_live": true
     }
   ],
-  "total_points": 2610
+  "total_points": 2609
 }
