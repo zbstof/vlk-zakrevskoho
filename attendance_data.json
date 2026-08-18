@@ -13104,7 +13104,37 @@
       "date": "2026-08-17",
       "id": "7956",
       "is_live": true
+    },
+    {
+      "date": "2026-08-18",
+      "id": "7829",
+      "is_live": false
+    },
+    {
+      "date": "2026-08-18",
+      "id": "7890",
+      "is_live": false
+    },
+    {
+      "date": "2026-08-18",
+      "id": "7906",
+      "is_live": false
+    },
+    {
+      "date": "2026-08-18",
+      "id": "7917",
+      "is_live": false
+    },
+    {
+      "date": "2026-08-18",
+      "id": "7927",
+      "is_live": false
+    },
+    {
+      "date": "2026-08-18",
+      "id": "7941",
+      "is_live": false
     }
   ],
-  "total_points": 2621
+  "total_points": 2627
 }
