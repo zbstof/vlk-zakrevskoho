@@ -13442,9 +13442,19 @@
     },
     {
       "date": "2026-08-25",
+      "id": "8064",
+      "is_live": true
+    },
+    {
+      "date": "2026-08-25",
+      "id": "8066",
+      "is_live": true
+    },
+    {
+      "date": "2026-08-25",
       "id": "8067",
       "is_live": true
     }
   ],
-  "total_points": 2689
+  "total_points": 2691
 }
