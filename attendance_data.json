@@ -13639,7 +13639,17 @@
       "date": "2026-09-07",
       "id": "8167",
       "is_live": false
+    },
+    {
+      "date": "2026-09-09",
+      "id": "8045",
+      "is_live": false
+    },
+    {
+      "date": "2026-09-09",
+      "id": "8164",
+      "is_live": false
     }
   ],
-  "total_points": 2728
+  "total_points": 2730
 }
