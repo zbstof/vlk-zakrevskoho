@@ -13689,7 +13689,12 @@
       "date": "2026-09-22",
       "id": "8236",
       "is_live": false
+    },
+    {
+      "date": "2026-09-24",
+      "id": "8109",
+      "is_live": false
     }
   ],
-  "total_points": 2738
+  "total_points": 2739
 }
