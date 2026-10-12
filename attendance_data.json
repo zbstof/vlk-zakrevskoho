@@ -13694,7 +13694,12 @@
       "date": "2026-09-24",
       "id": "8109",
       "is_live": false
+    },
+    {
+      "date": "2026-10-12",
+      "id": "8254",
+      "is_live": false
     }
   ],
-  "total_points": 2739
+  "total_points": 2740
 }
