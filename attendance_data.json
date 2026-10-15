@@ -13709,17 +13709,7 @@
       "date": "2026-10-13",
       "id": "8259",
       "is_live": false
-    },
-    {
-      "date": "2026-10-14",
-      "id": "8258",
-      "is_live": false
-    },
-    {
-      "date": "2026-10-14",
-      "id": "8259",
-      "is_live": false
     }
   ],
-  "total_points": 2744
+  "total_points": 2742
 }
