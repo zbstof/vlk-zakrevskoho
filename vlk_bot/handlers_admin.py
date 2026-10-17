@@ -10,7 +10,10 @@ import pandas as pd
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from vlk_bot.formatters import get_poll_text
+from vlk_bot.formatters import (
+    get_poll_text, get_status_notification_text, get_reminder_notification_text,
+    get_poll_expire_text
+)
 from vlk_bot.keyboards import MAIN_KEYBOARD, get_poll_keyboard
 from vlk_bot.sheets import (
     load_queue_data, save_queue_data_full, get_users_for_date_from_active_sheet
@@ -293,26 +296,15 @@ async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 @admin_only
 async def test_poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Надсилає тестове опитування."""
-    user = update.effective_user
-    requester_id = user.id
-    
-    user_id = None
-    
-    if context.args:
-        user_id = context.args[0]
-    else:
-        users = get_users_for_date_from_active_sheet('')
-        for u in users:
-            if u.get('tg_id') == str(requester_id):
-                user_id = u['id']
-                break
-    
-    if not user_id:
+    if not context.args:
         await update.message.reply_text(
-            "ID не знайдено в Active sheet. Вкажіть ID явно: /test_poll 1234",
+            "Будь ласка, вкажіть ID для тестування. Наприклад: <code>/test_poll 1234</code>",
             parse_mode="HTML"
         )
         return
+        
+    user = update.effective_user
+    user_id = context.args[0]
     
     next_working_days = get_next_working_days(1)
     test_date = next_working_days[0].strftime("%d.%m.%Y") if next_working_days else "Тестова дата"
@@ -321,13 +313,118 @@ async def test_poll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     context.bot_data['next_reception_date'] = next_working_days[0] if next_working_days else datetime.date.today()
     
     await context.bot.send_message(
-        chat_id=requester_id,
+        chat_id=user.id,
         text=f"<b>ТЕСТОВЕ</b> {get_poll_text(user_id, test_date)}",
         reply_markup=get_poll_keyboard(user_id),
         parse_mode="HTML"
     )
     
-    logger.info(f"Тестове опитування надіслано адміністратору {get_user_log_info(user)} з ID: {user_id}")
+    logger.info(f"Тестове опитування надіслано адміністратору {get_user_log_info(user)} для ID: {user_id}")
+
+
+@admin_only
+async def test_notify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Надсилає тестове сповіщення про зміну статусу."""
+    if not context.args:
+        await update.message.reply_text(
+            "Будь ласка, вкажіть ID для тестування. Наприклад: <code>/test_notify 1234</code>",
+            parse_mode="HTML"
+        )
+        return
+        
+    user = update.effective_user
+    user_id = context.args[0]
+    
+    # Використовуємо реальні дані з черги, якщо вони є, інакше - тестові
+    queue_df = load_queue_data()
+    row = None
+    if queue_df is not None and not queue_df.empty:
+        user_rows = queue_df[queue_df['ID'] == user_id]
+        if not user_rows.empty:
+            row = user_rows.iloc[-1]
+            
+    status = row['Статус'] if row is not None else "Ухвалено"
+    date = row['Дата'] if row is not None else "01.01.2025"
+    prev_date = row['Попередня дата'] if row is not None else ""
+    note = row['Примітки'] if row is not None else "Тестова примітка"
+    
+    notification = get_status_notification_text(user_id, status, date, prev_date, note)
+    
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=f"<b>ТЕСТОВЕ</b>\n{notification}",
+        parse_mode="HTML"
+    )
+    
+    logger.info(f"Тестове сповіщення про статус надіслано адміністратору {get_user_log_info(user)} для ID: {user_id}")
+
+
+@admin_only
+async def test_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Надсилає тестове нагадування про візит."""
+    if not context.args:
+        await update.message.reply_text(
+            "Будь ласка, вкажіть ID для тестування. Наприклад: <code>/test_reminder 1234</code>",
+            parse_mode="HTML"
+        )
+        return
+        
+    user = update.effective_user
+    user_id = context.args[0]
+    
+    queue_df = load_queue_data()
+    row = None
+    if queue_df is not None and not queue_df.empty:
+        user_rows = queue_df[queue_df['ID'] == user_id]
+        if not user_rows.empty:
+            row = user_rows.iloc[-1]
+            
+    date = row['Дата'] if row is not None else "01.01.2025"
+    note = row['Примітки'] if row is not None else "Тестова примітка"
+    nr_days = "на сьогодні"
+    
+    notification = get_reminder_notification_text(user_id, date, nr_days, note)
+    
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=f"<b>ТЕСТОВЕ</b>\n{notification}",
+        parse_mode="HTML"
+    )
+    
+    logger.info(f"Тестове нагадування надіслано адміністратору {get_user_log_info(user)} для ID: {user_id}")
+
+
+@admin_only
+async def test_expire(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Надсилає тестове повідомлення про завершення опитування та маркує його як прострочене."""
+    if not context.args:
+        await update.message.reply_text(
+            "Будь ласка, вкажіть ID для тестування. Наприклад: <code>/test_expire 1234</code>",
+            parse_mode="HTML"
+        )
+        return
+        
+    user = update.effective_user
+    user_id = context.args[0]
+    
+    next_sheet = context.bot_data.get('next_reception_sheet')
+    if not next_sheet:
+        await update.message.reply_text(
+            "Дані про аркуш не знайдено. Спочатку запустіть /test_poll або /run_check_sheet",
+            parse_mode="HTML"
+        )
+        return
+    
+    from vlk_bot.sheets import update_confirmation_status
+    update_confirmation_status(user_id, 'Не відповів')
+    
+    await context.bot.send_message(
+        chat_id=user.id,
+        text=f"<b>ТЕСТОВЕ</b>\n{get_poll_expire_text(user_id, next_sheet)}",
+        parse_mode="HTML"
+    )
+    
+    logger.info(f"Тестове завершення опитування надіслано адміністратору {get_user_log_info(user)} для ID: {user_id}. Опитування заблоковано.")
 
 
 @admin_only
@@ -411,25 +508,4 @@ async def run_poll_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_text(f"Запускаю опитування для дати {next_sheet}...")
     await send_visit_poll(context)
     await update.message.reply_text("Опитування завершено.", reply_markup=MAIN_KEYBOARD)
-
-
-@admin_only
-async def show_environment_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показує поточне оточення бота."""
-    from vlk_bot.config import ENVIRONMENT
-    
-    scheduled_status = "вимкнено" if ENVIRONMENT == "test" else "увімкнено"
-    
-    await update.message.reply_text(
-        f"<b>Оточення:</b> <code>{ENVIRONMENT}</code>\n"
-        f"<b>Заплановані завдання:</b> {scheduled_status}\n\n"
-        f"<b>Команди для ручного запуску:</b>\n"
-        f"/run_cleanup - очищення черги\n"
-        f"/run_notify - перевірка статусів\n"
-        f"/run_reminder - нагадування\n"
-        f"/run_check_sheet - перевірка аркуша\n"
-        f"/run_poll - надіслати опитування",
-        parse_mode="HTML",
-        reply_markup=MAIN_KEYBOARD
-    )
 

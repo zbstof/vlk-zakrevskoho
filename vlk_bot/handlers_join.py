@@ -20,7 +20,8 @@ from vlk_bot.prediction import calculate_prediction, calculate_date_probability
 from vlk_bot.sheets import load_queue_data, save_queue_data, get_stats_data
 from vlk_bot.utils import (
     get_user_log_info, get_user_telegram_data, is_admin, is_banned,
-    extract_main_id, get_ordinal_date, send_group_notification
+    extract_main_id, get_ordinal_date, send_group_notification,
+    check_deadline
 )
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,18 @@ async def join_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             
         context.user_data['previous_state'] = previous_date
         context.user_data['user_notes'] = last_note
+        
+        # Перевірка дедлайну для перенесення
+        if check_deadline(previous_date):
+            await update.message.reply_text(
+                f"⚠️ *УВАГА:* Час для автоматичного перенесення вашого візиту на `{previous_date}` минув.\n\n"
+                f"Зміни заблоковані після 7:00 ранку дня візиту. Будь ласка, приходьте за розкладом або зверніться до адміністратора.",
+                parse_mode='Markdown',
+                reply_markup=MAIN_KEYBOARD
+            )
+            context.user_data.clear()
+            return ConversationHandler.END
+
         await update.message.reply_text(
             f"Номер `{user_id_input}` вже записаний в черзі.\nВаш попередній запис {'на дату' if previous_date else ''} `{previous_date if previous_date else 'Скасовано'}` буде оновлено.",
             parse_mode='Markdown'
@@ -320,7 +333,8 @@ async def join_get_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         'Статус': 'На розгляді',
         'Змінено': datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
         'Попередня дата': previous_state,
-        **telegram_user_data
+        **telegram_user_data,
+        'Підтвердження': ''
     }
     
     new_entry_df = pd.DataFrame([new_entry])

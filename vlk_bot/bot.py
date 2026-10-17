@@ -26,8 +26,9 @@ from vlk_bot.config import (
 from vlk_bot.handlers_admin import (
     perform_queue_cleanup,
     open_sheet_command, grant_admin, drop_admin, ban, unban, test_poll,
+    test_notify, test_reminder, test_expire,
     run_cleanup_command, run_notify_command, run_reminder_command,
-    run_check_sheet_command, run_poll_command, show_environment_command
+    run_check_sheet_command, run_poll_command
 )
 from vlk_bot.handlers_cancel import cancel_record_start, cancel_record_get_id
 from vlk_bot.handlers_common import (
@@ -120,12 +121,14 @@ def main() -> None:
     application.add_handler(CommandHandler("ban", ban))
     application.add_handler(CommandHandler("unban", unban))
     application.add_handler(CommandHandler("test_poll", test_poll))
+    application.add_handler(CommandHandler("test_notify", test_notify))
+    application.add_handler(CommandHandler("test_reminder", test_reminder))
+    application.add_handler(CommandHandler("test_expire", test_expire))
     application.add_handler(CommandHandler("run_cleanup", run_cleanup_command))
     application.add_handler(CommandHandler("run_notify", run_notify_command))
     application.add_handler(CommandHandler("run_reminder", run_reminder_command))
     application.add_handler(CommandHandler("run_check_sheet", run_check_sheet_command))
     application.add_handler(CommandHandler("run_poll", run_poll_command))
-    application.add_handler(CommandHandler("env", show_environment_command))
 
     application.add_handler(join_conv_handler)
     application.add_handler(cancel_conv_handler)

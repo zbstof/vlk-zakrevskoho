@@ -502,3 +502,110 @@ def get_users_for_date_from_active_sheet(target_date: str) -> list:
     except Exception as e:
         logger.error(f"Помилка читання Active sheet: {e}")
         return []
+
+
+def update_confirmation_status(user_id: str, confirmation: str) -> bool:
+    """
+    Оновлює колонку Підтвердження для останнього запису з вказаним ID.
+    """
+    from vlk_bot.config import SHEETS_SERVICE, SPREADSHEET_ID, SHEET_NAME, REQUIRED_COLUMNS
+    
+    if SHEETS_SERVICE is None:
+        logger.error("Google Sheets API не ініціалізовано.")
+        return False
+    
+    try:
+        confirmation_col_index = REQUIRED_COLUMNS.index('Підтвердження')
+        confirmation_col_letter = chr(ord('A') + confirmation_col_index)
+        
+        range_name = f"{SHEET_NAME}!A:J"
+        result = _execute_with_retry(
+            "update_confirmation_status.get",
+            lambda: SHEETS_SERVICE.spreadsheets().values().get(
+                spreadsheetId=SPREADSHEET_ID,
+                range=range_name
+            ).execute()
+        )
+        
+        values = result.get('values', [])
+        if len(values) < 2:
+            logger.warning("TODO_BOT sheet порожній або містить лише заголовки")
+            return False
+        
+        modified_col_index = REQUIRED_COLUMNS.index('Змінено')
+        id_col_index = REQUIRED_COLUMNS.index('ID')
+        
+        latest_row_index = None
+        latest_modified = None
+        
+        for i, row in enumerate(values[1:], start=2):
+            if len(row) <= id_col_index:
+                continue
+            if str(row[id_col_index]).strip() != str(user_id).strip():
+                continue
+            
+            modified_str = row[modified_col_index] if len(row) > modified_col_index else ''
+            try:
+                modified_dt = pd.to_datetime(modified_str, format="%d.%m.%Y %H:%M:%S", errors='coerce')
+            except Exception:
+                modified_dt = pd.NaT
+            
+            if pd.isna(modified_dt):
+                modified_dt = pd.Timestamp("2000-01-01")
+            
+            if latest_modified is None or modified_dt > latest_modified:
+                latest_modified = modified_dt
+                latest_row_index = i
+        
+        if latest_row_index is None:
+            logger.warning(f"ID {user_id} не знайдено в TODO_BOT sheet")
+            return False
+        
+        cell_range = f"{SHEET_NAME}!{confirmation_col_letter}{latest_row_index}"
+        _execute_with_retry(
+            "update_confirmation_status.update",
+            lambda: SHEETS_SERVICE.spreadsheets().values().update(
+                spreadsheetId=SPREADSHEET_ID,
+                range=cell_range,
+                valueInputOption='USER_ENTERED',
+                body={'values': [[confirmation]]}
+            ).execute()
+        )
+        
+        logger.info(f"Підтвердження ID {user_id} оновлено на '{confirmation}'")
+        return True
+        
+    except HttpError as err:
+        logger.error(f"Google API HttpError при оновленні підтвердження: {err.resp.status} - {err.content}")
+        return False
+    except RETRY_EXCEPTIONS:
+        return False
+    except Exception as e:
+        logger.error(f"Помилка оновлення підтвердження: {e}")
+        return False
+
+
+def get_confirmation_status(user_id: str, queue_df: pd.DataFrame = None) -> str:
+    """
+    Отримує статус підтвердження для останнього запису з вказаним ID.
+    Якщо queue_df передано, читає з нього, інакше завантажує з API.
+    """
+    if queue_df is None:
+        queue_df = load_queue_data()
+    
+    if queue_df is None or queue_df.empty:
+        return ''
+    
+    user_rows = queue_df[queue_df['ID'] == str(user_id)]
+    if user_rows.empty:
+        return ''
+    
+    user_rows = user_rows.copy()
+    user_rows['Змінено_dt'] = pd.to_datetime(
+        user_rows['Змінено'], format="%d.%m.%Y %H:%M:%S", errors='coerce'
+    )
+    user_rows['Змінено_dt'] = user_rows['Змінено_dt'].fillna(pd.Timestamp("2000-01-01"))
+    
+    latest = user_rows.loc[user_rows['Змінено_dt'].idxmax()]
+    
+    return str(latest.get('Підтвердження', '')).strip()

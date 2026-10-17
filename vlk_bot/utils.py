@@ -3,11 +3,11 @@
 """
 
 import datetime
-import json
 import logging
 import os
 import re
 
+import pandas as pd
 from telegram import User
 
 logger = logging.getLogger(__name__)
@@ -59,20 +59,68 @@ def extract_main_id(id_string):
     return None
 
 
-def load_status_state() -> dict:
-    """Завантажує останній відомий стан статусів з JSON-файлу."""
-    from vlk_bot.config import STATUS_FILE
-    if os.path.exists(STATUS_FILE):
-        with open(STATUS_FILE, "r", encoding='utf8') as f:
-            return json.load(f)
-    return {}
+def load_todo_cache() -> pd.DataFrame:
+    """Завантажує кешований стан TODO_BOT з CSV-файлу."""
+    from vlk_bot.config import TODO_BOT_CACHE_FILE
+    if os.path.exists(TODO_BOT_CACHE_FILE):
+        try:
+            return pd.read_csv(TODO_BOT_CACHE_FILE, dtype=str).fillna('')
+        except Exception as e:
+            logger.warning(f"Помилка читання кешу TODO_BOT: {e}")
+    return pd.DataFrame()
 
 
-def save_status_state(state: dict):
-    """Зберігає поточний стан статусів у JSON-файл."""
-    from vlk_bot.config import STATUS_FILE
-    with open(STATUS_FILE, "w", encoding='utf8') as f:
-        json.dump(state, f, indent=4, ensure_ascii=False)
+def save_todo_cache(df: pd.DataFrame):
+    """Зберігає поточний стан TODO_BOT у CSV-файл."""
+    from vlk_bot.config import TODO_BOT_CACHE_FILE
+    try:
+        df.to_csv(TODO_BOT_CACHE_FILE, index=False)
+    except Exception as e:
+        logger.error(f"Помилка збереження кешу TODO_BOT: {e}")
+
+
+def compare_dataframes(current_df: pd.DataFrame, cached_df: pd.DataFrame) -> list[dict]:
+    """
+    Порівнює поточний стан з кешем, повертає список змін.
+    Складність: O(n)
+    """
+    if cached_df.empty:
+        return []
+    
+    if current_df.empty:
+        return []
+    
+    current_df = current_df.copy()
+    cached_df = cached_df.copy()
+    
+    current_df['Змінено_dt'] = pd.to_datetime(
+        current_df['Змінено'], format="%d.%m.%Y %H:%M:%S", errors='coerce'
+    )
+    cached_df['Змінено_dt'] = pd.to_datetime(
+        cached_df['Змінено'], format="%d.%m.%Y %H:%M:%S", errors='coerce'
+    )
+    
+    current_df['Змінено_dt'] = current_df['Змінено_dt'].fillna(pd.Timestamp("2000-01-01"))
+    cached_df['Змінено_dt'] = cached_df['Змінено_dt'].fillna(pd.Timestamp("2000-01-01"))
+    
+    current_latest = current_df.loc[current_df.groupby('ID')['Змінено_dt'].idxmax()]
+    cached_latest = cached_df.loc[cached_df.groupby('ID')['Змінено_dt'].idxmax()]
+    
+    current_dict = current_latest.set_index('ID').to_dict('index')
+    cached_dict = cached_latest.set_index('ID').to_dict('index')
+    
+    changes = []
+    for user_id, current_row in current_dict.items():
+        cached_row = cached_dict.get(user_id)
+        
+        if cached_row is None:
+            changes.append({'id': user_id, 'type': 'new', 'row': current_row})
+        elif (current_row.get('Статус') != cached_row.get('Статус') or
+              current_row.get('Дата') != cached_row.get('Дата') or
+              current_row.get('Змінено') != cached_row.get('Змінено')):
+            changes.append({'id': user_id, 'type': 'changed', 'row': current_row})
+    
+    return changes
 
 
 def get_ordinal_date(date_obj):
@@ -136,6 +184,34 @@ def id_to_numeric(id_val):
         if match:
             return float(match.group(1))
         return None
+
+
+def check_deadline(date_str: str) -> bool:
+    """
+    Перевіряє, чи минув дедлайн для вказаної дати.
+    Дедлайн — 7:00 ранку дня візиту (для вівторка-п'ятниці)
+    або 7:00 ранку суботи (для понеділка).
+    """
+    if not date_str:
+        return False
+    try:
+        visit_date = datetime.datetime.strptime(date_str, "%d.%m.%Y").date()
+        now = datetime.datetime.now()
+        today = now.date()
+        
+        # Для понеділка (weekday == 0) дедлайн у суботу (за 2 дні)
+        if visit_date.weekday() == 0:
+            deadline_date = visit_date - datetime.timedelta(days=2)
+        else:
+            deadline_date = visit_date
+            
+        if today > deadline_date:
+            return True
+        if today == deadline_date and now.hour >= 7:
+            return True
+        return False
+    except ValueError:
+        return False
 
 
 async def send_group_notification(context, text: str):

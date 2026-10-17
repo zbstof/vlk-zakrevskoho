@@ -53,6 +53,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показує список доступних команд."""
+    from vlk_bot.config import ENVIRONMENT
     user = update.effective_user
     
     user_commands = (
@@ -70,20 +71,28 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     admin_commands = ""
     if is_admin(user.id):
+        scheduled_status = "вимкнено" if ENVIRONMENT == "test" else "увімкнено"
+        
         admin_commands = (
-            "\n\n<b>Команди адміністратора:</b>\n"
-            "/env - Показати оточення та команди запуску\n"
-            "/run_cleanup - Запустити очищення черги\n"
-            "/run_notify - Запустити перевірку статусів\n"
-            "/run_reminder - Запустити нагадування\n"
-            "/run_check_sheet - Перевірити новий аркуш\n"
-            "/run_poll - Надіслати опитування\n"
-            "/test_poll [ID] - Тестове опитування\n"
-            "/grant_admin ID - Додати адміністратора\n"
-            "/drop_admin ID - Видалити адміністратора\n"
-            "/ban ID - Заблокувати користувача\n"
-            "/unban ID - Розблокувати користувача\n"
-            "/sheet - Посилання на Google Sheets"
+            f"\n\n<b>Оточення:</b> <code>{ENVIRONMENT}</code>\n"
+            f"<b>Заплановані завдання:</b> {scheduled_status}\n\n"
+            "<b>Команди адміністратора:</b>\n"
+            "/run_cleanup - очищення черги\n"
+            "/run_notify - перевірка статусів\n"
+            "/run_reminder - нагадування\n"
+            "/run_check_sheet - перевірка аркуша\n"
+            "/run_poll - надіслати опитування\n"
+            "/sheet - посилання на Google Sheets\n\n"
+            "<b>Тестові команди адміністратора:</b>\n"
+            "/test_poll ID - тест опитування\n"
+            "/test_notify ID - тест зміни статусу\n"
+            "/test_reminder ID - тест нагадування\n"
+            "/test_expire ID - тест завершення опитування\n\n"
+            "<b>Керування правами:</b>\n"
+            "/grant_admin ID - додати адміністратора\n"
+            "/drop_admin ID - видалити адміністратора\n"
+            "/ban ID - заблокувати користувача\n"
+            "/unban ID - розблокувати користувача"
         )
     
     await update.message.reply_text(

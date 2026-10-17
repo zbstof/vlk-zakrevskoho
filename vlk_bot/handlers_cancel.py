@@ -87,7 +87,8 @@ async def cancel_record_get_id(update: Update, context: ContextTypes.DEFAULT_TYP
             'Статус': 'На розгляді',
             'Змінено': datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
             'Попередня дата': previous_date,
-            **telegram_user_data
+            **telegram_user_data,
+            'Підтвердження': ''
         }
         
         new_entry_df = pd.DataFrame([new_entry])

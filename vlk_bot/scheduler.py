@@ -8,10 +8,18 @@ import logging
 import pandas as pd
 from pytz import timezone
 
-from vlk_bot.formatters import get_poll_text
+from vlk_bot.formatters import (
+    get_poll_text, get_status_notification_text, get_reminder_notification_text,
+    get_poll_expire_text
+)
 from vlk_bot.keyboards import get_poll_keyboard
-from vlk_bot.sheets import load_queue_data, get_sheets_list, get_users_for_date_from_active_sheet
-from vlk_bot.utils import get_next_working_days, load_status_state, save_status_state
+from vlk_bot.sheets import (
+    load_queue_data, get_sheets_list, get_users_for_date_from_active_sheet,
+    update_confirmation_status
+)
+from vlk_bot.utils import (
+    get_next_working_days, load_todo_cache, save_todo_cache, compare_dataframes
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +38,6 @@ async def notify_status(context) -> None:
     """Функція для відстеження зміни статусу запису та надсилання сповіщень."""
     logger.info("Початок перевірки зміни статусів записів.")
     
-    # 1. Завантажуємо дані з Google Sheets
     import vlk_bot.config as config_module
     config_module.queue_df = load_queue_data()
     queue_df = config_module.queue_df
@@ -39,71 +46,36 @@ async def notify_status(context) -> None:
         logger.warning("Черга порожня або не завантажена")
         return
     
-    # 2. Очищаємо та готуємо дані
-    queue_df['Змінено_dt'] = pd.to_datetime(queue_df['Змінено'], format="%d.%m.%Y %H:%M:%S", errors='coerce')
-    # Використовуємо стару дату (2000 рік), щоб записи без дати зміни не перекривали актуальні записи при сортуванні
-    queue_df['Змінено_dt'] = queue_df['Змінено_dt'].fillna(pd.Timestamp("2000-01-01 00:00:00"))
-    queue_df.dropna(inplace=True)
-    queue_df['TG ID'] = queue_df['TG ID'].astype(str)    
-
-    # 3. Знаходимо найактуальніший запис для кожного користувача
-    latest_entries = queue_df.loc[queue_df.groupby('ID')['Змінено_dt'].idxmax()]
-
-    # 4. Завантажуємо останній відомий стан
-    last_known_state = load_status_state()
+    queue_df['TG ID'] = queue_df['TG ID'].astype(str)
     
-    # 5. Перевіряємо зміни та відправляємо сповіщення
-    new_state = {}
-    for index, row in latest_entries.iterrows():
-        user_id = row['ID']
-        target_date = row['Дата']
-        note = row['Примітки']
-        current_status = row['Статус']
-        modified = row['Змінено']
-        prev_date = row['Попередня дата']
-        tg_id = row['TG ID']
-              
-        last_status_info = last_known_state.get(user_id)
-
-        if not last_status_info:
-            confirmation = ''
-        elif 'confirmation' not in last_status_info:
-            confirmation = ''
-        else:
-            confirmation = last_status_info['confirmation']
-      
-        # Якщо стан змінився або це новий запис
-        if ((not last_status_info) 
-            or (last_status_info['status'] != current_status and last_status_info['date'] == target_date and last_status_info['modified'] == modified)
-            or (last_status_info['date'] != target_date or last_status_info['modified'] != modified)
-        ):
-            # Формуємо текст повідомлення
-            if current_status != 'На розгляді':
-                if target_date != '':
-                    to_date = f" на <code>{target_date}</code>"
-                    if prev_date != '':
-                        rmc = 'перенесення'
-                    else:
-                        rmc = 'створення'
-                else:
-                    rmc = 'скасування'
-                    to_date = ""
-                emo = '🟢' if current_status == 'Ухвалено' else '🔴'
-                notification_text = f"{emo} Заявку на {rmc} запису ID <code>{user_id}</code> {to_date}\n<code>{current_status}</code>"
-                notification_warning = f'\nПримітка: <code>{note}</code>' if note !='' else ''
-                notification = notification_text+notification_warning
-                await send_user_notification(context, tg_id, notification)
+    cached_df = load_todo_cache()
+    
+    changes = compare_dataframes(queue_df, cached_df)
+    
+    if not changes:
+        logger.debug("Змін не виявлено")
+        save_todo_cache(queue_df)
+        return
+    
+    logger.info(f"Виявлено {len(changes)} змін")
+    
+    for change in changes:
+        user_id = change['id']
+        row = change['row']
         
-        # Оновлюємо стан для збереження
-        new_state[user_id] = {
-            'date': target_date,
-            'status': current_status,
-            'modified': modified,
-            'confirmation': confirmation
-        }
-
-    # 6. Зберігаємо оновлений стан
-    save_status_state(new_state)
+        target_date = row.get('Дата', '')
+        note = row.get('Примітки', '')
+        current_status = row.get('Статус', '')
+        prev_date = row.get('Попередня дата', '')
+        tg_id = str(row.get('TG ID', ''))
+        
+        notification = get_status_notification_text(
+            user_id, current_status, target_date, prev_date, note
+        )
+        if notification:
+            await send_user_notification(context, tg_id, notification)
+    
+    save_todo_cache(queue_df)
     logger.info("Завершення перевірки зміни статусів записів.")
 
 
@@ -152,10 +124,9 @@ async def date_reminder(context) -> None:
             nr_days = 'за 3 дні'
         
         if remind and current_status == 'Ухвалено':
-            emo = '❗️'
-            notification_text = f"{emo}<code>Нагадування!</code>\n  Для вашого номеру <code>{user_id}</code> призначено візит {nr_days}: <code>{target_date}</code>"
-            notification_warning = f'\nПримітка: <code>{note}</code>' if note !='' else ''
-            notification = notification_text+notification_warning
+            notification = get_reminder_notification_text(
+                user_id, target_date, nr_days, note
+            )
             await send_user_notification(context, tg_id, notification)
 
     logger.info("Завершення процедури нагадування і підтвердження дати візиту.")
@@ -279,12 +250,18 @@ async def expire_unanswered_polls(context) -> None:
         logger.debug("Немає даних про аркуш опитування")
         return
     
-    last_known_state = load_status_state()
+    from vlk_bot.sheets import get_confirmation_status
+    
     users = get_users_for_date_from_active_sheet(next_sheet)
     
     if not users:
         logger.debug("Немає користувачів для перевірки")
         return
+    
+    import vlk_bot.config as config_module
+    queue_df = config_module.queue_df
+    if queue_df is None:
+        queue_df = load_queue_data()
     
     expired_count = 0
     for user_data in users:
@@ -294,32 +271,23 @@ async def expire_unanswered_polls(context) -> None:
         if not user_id:
             continue
         
-        user_state = last_known_state.get(user_id, {})
-        confirmation = user_state.get('confirmation', '')
+        confirmation = get_confirmation_status(user_id, queue_df)
         
         if not confirmation:
-            last_known_state[user_id] = {
-                **user_state,
-                'confirmation': 'Не відповів'
-            }
+            update_confirmation_status(user_id, 'Не відповів')
             expired_count += 1
             
             if tg_id and tg_id.strip():
                 try:
                     await context.bot.send_message(
                         chat_id=int(tg_id),
-                        text=(
-                            f"Час на відповідь на опитування щодо візиту на <code>{next_sheet}</code> "
-                            f"для номеру <code>{user_id}</code> минув.\n\n"
-                            f"Якщо ви плануєте прийти - просто приходьте за розкладом."
-                        ),
+                        text=get_poll_expire_text(user_id, next_sheet),
                         parse_mode="HTML"
                     )
                 except Exception as e:
                     logger.warning(f"Не вдалося надіслати повідомлення про закриття опитування {user_id}: {e}")
     
     if expired_count > 0:
-        save_status_state(last_known_state)
         logger.info(f"Закрито {expired_count} невідповіданих опитувань")
     
     context.bot_data.pop('poll_sent_for_date', None)

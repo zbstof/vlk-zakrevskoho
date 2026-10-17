@@ -20,11 +20,16 @@ from vlk_bot.formatters import calculate_end_date
 from vlk_bot.formatters import get_poll_text
 from vlk_bot.keyboards import get_poll_keyboard, date_inline_keyboard_from_prediction, MAIN_KEYBOARD
 from vlk_bot.prediction import calculate_prediction, calculate_date_probability, calculate_prediction_with_daily_data
-from vlk_bot.sheets import load_queue_data, save_queue_data, update_active_sheet_status, delete_row_from_active_sheet, get_stats_data
-from vlk_bot.utils import get_ordinal_date
-from vlk_bot.utils import get_user_log_info, get_user_telegram_data, extract_main_id, save_status_state, \
-    load_status_state, send_group_notification
-from vlk_bot.utils import id_to_numeric
+from vlk_bot.sheets import (
+    load_queue_data, save_queue_data, update_active_sheet_status, 
+    delete_row_from_active_sheet, get_stats_data, 
+    update_confirmation_status, get_confirmation_status
+)
+from vlk_bot.utils import (
+    get_user_log_info, get_user_telegram_data, extract_main_id,
+    send_group_notification, check_deadline, is_admin,
+    get_ordinal_date, id_to_numeric
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,18 +61,25 @@ async def handle_poll_response(update: Update, context: ContextTypes.DEFAULT_TYP
     
     logger.info(f"Poll response: action={action}, user_id={user_id}, from={get_user_log_info(user)}")
     
-    last_known_state = load_status_state()
+    import vlk_bot.config as config_module
+    queue_df = config_module.queue_df
+    if queue_df is None:
+        queue_df = load_queue_data()
     
+    confirmation = get_confirmation_status(user_id, queue_df)
+    visit_date = context.bot_data.get('next_reception_sheet', '')
+    
+    if confirmation == 'Не відповів' or check_deadline(visit_date):
+        await query.edit_message_text(
+            f"<b>УВАГА:</b> Час для зміни запису ID <code>{user_id}</code> на <code>{visit_date}</code> минув.\n\n"
+            f"Зміни заблоковані. Будь ласка, приходьте за розкладом або зверніться до адміністратора.",
+            parse_mode="HTML"
+        )
+        return
+
     if action == POLL_CONFIRM:
         update_active_sheet_status(user_id, "Підтвердив візит")
-        
-        visit_date = context.bot_data.get('next_reception_sheet', '')
-        if not visit_date and user_id in last_known_state:
-            visit_date = last_known_state.get(user_id, {}).get('date', '')
-        
-        if user_id in last_known_state:
-            last_known_state[user_id]['confirmation'] = 'Підтверджено'
-            save_status_state(last_known_state)
+        update_confirmation_status(user_id, 'Підтверджено')
         
         date_text = f" на <code>{visit_date}</code>" if visit_date else ""
         await query.edit_message_text(
@@ -124,6 +136,20 @@ async def handle_poll_cancel_actions(update: Update, context: ContextTypes.DEFAU
     user = query.from_user
     
     import vlk_bot.config as config_module
+    queue_df = config_module.queue_df
+    if queue_df is None:
+        queue_df = load_queue_data()
+    
+    confirmation = get_confirmation_status(user_id, queue_df)
+    visit_date = context.bot_data.get('next_reception_sheet', '')
+    
+    if confirmation == 'Не відповів' or check_deadline(visit_date):
+        await query.edit_message_text(
+            f"<b>УВАГА:</b> Час для зміни запису ID <code>{user_id}</code> минув.\n\n"
+            f"Зміни заблоковані. Будь ласка, приходьте за розкладом або зверніться до адміністратора.",
+            parse_mode="HTML"
+        )
+        return
     
     if action == POLL_CANCEL_CONFIRM:
         config_module.queue_df = load_queue_data()
@@ -136,18 +162,14 @@ async def handle_poll_cancel_actions(update: Update, context: ContextTypes.DEFAU
             'Статус': 'Ухвалено',
             'Змінено': datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
             'Попередня дата': context.bot_data.get('next_reception_sheet', ''),
-            **telegram_user_data
+            **telegram_user_data,
+            'Підтвердження': 'Скасовано'
         }
         
         new_entry_df = pd.DataFrame([new_entry])
         if save_queue_data(new_entry_df):
             config_module.queue_df = pd.concat([config_module.queue_df, new_entry_df], ignore_index=True)
             delete_row_from_active_sheet(user_id)
-            
-            last_known_state = load_status_state()
-            if user_id in last_known_state:
-                last_known_state[user_id]['confirmation'] = 'Скасовано'
-                save_status_state(last_known_state)
             
             await query.edit_message_text(
                 f"Запис для ID <code>{user_id}</code> скасовано.\n"
@@ -197,7 +219,27 @@ async def handle_poll_date_selection(update: Update, context: ContextTypes.DEFAU
     
     if data.startswith(f"{POLL_DATE_OTHER}_"):
         user_id = data.replace(f"{POLL_DATE_OTHER}_", "")
-        
+    else:
+        parts = data.split('_')
+        user_id = parts[2] if len(parts) >= 3 else ""
+
+    import vlk_bot.config as config_module
+    queue_df = config_module.queue_df
+    if queue_df is None:
+        queue_df = load_queue_data()
+    
+    confirmation = get_confirmation_status(user_id, queue_df)
+    visit_date = context.bot_data.get('next_reception_sheet', '')
+    
+    if user_id and (confirmation == 'Не відповів' or check_deadline(visit_date)):
+        await query.edit_message_text(
+            f"<b>УВАГА:</b> Час для зміни запису ID <code>{user_id}</code> минув.\n\n"
+            f"Зміни заблоковані. Будь ласка, приходьте за розкладом або зверніться до адміністратора.",
+            parse_mode="HTML"
+        )
+        return
+
+    if data.startswith(f"{POLL_DATE_OTHER}_"):
         context.user_data['poll_awaiting_custom_date'] = True
         context.user_data['poll_reschedule_user_id'] = user_id
         
@@ -217,7 +259,6 @@ async def handle_poll_date_selection(update: Update, context: ContextTypes.DEFAU
         logger.warning(f"Невірний формат date callback: {data}")
         return
     
-    user_id = parts[2]
     date_str = parts[3]
     
     import vlk_bot.config as config_module
@@ -233,18 +274,14 @@ async def handle_poll_date_selection(update: Update, context: ContextTypes.DEFAU
         'Статус': 'Ухвалено',
         'Змінено': datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
         'Попередня дата': prev_date,
-        **telegram_user_data
+        **telegram_user_data,
+        'Підтвердження': f'Перенесено на {date_str}'
     }
     
     new_entry_df = pd.DataFrame([new_entry])
     if save_queue_data(new_entry_df):
         config_module.queue_df = pd.concat([config_module.queue_df, new_entry_df], ignore_index=True)
         update_active_sheet_status(user_id, "Відклав візит")
-        
-        last_known_state = load_status_state()
-        if user_id in last_known_state:
-            last_known_state[user_id]['confirmation'] = f'Перенесено на {date_str}'
-            save_status_state(last_known_state)
         
         await query.edit_message_text(
             f"Запис для ID <code>{user_id}</code> перенесено на <code>{date_str}</code>.",
@@ -270,6 +307,23 @@ async def handle_poll_custom_date(update: Update, context: ContextTypes.DEFAULT_
     date_input = update.message.text.strip()
     user_id = context.user_data.get('poll_reschedule_user_id', '')
     
+    queue_df = config_module.queue_df
+    if queue_df is None:
+        queue_df = load_queue_data()
+    
+    confirmation = get_confirmation_status(user_id, queue_df)
+    visit_date = context.bot_data.get('next_reception_sheet', '')
+    
+    if user_id and (confirmation == 'Не відповів' or check_deadline(visit_date)):
+        await update.message.reply_text(
+            f"<b>УВАГА:</b> Час для зміни запису ID <code>{user_id}</code> минув.\n\n"
+            f"Зміни заблоковані. Будь ласка, приходьте за розкладом або зверніться до адміністратора.",
+            parse_mode="HTML"
+        )
+        context.user_data.pop('poll_awaiting_custom_date', None)
+        context.user_data.pop('poll_reschedule_user_id', None)
+        raise ApplicationHandlerStop
+
     date_match = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{2,4})', date_input)
     if not date_match:
         await update.message.reply_text(
@@ -400,7 +454,8 @@ async def handle_poll_custom_date(update: Update, context: ContextTypes.DEFAULT_
         'Статус': 'Ухвалено',
         'Змінено': datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
         'Попередня дата': previous_date,
-        **telegram_user_data
+        **telegram_user_data,
+        'Підтвердження': f'Перенесено на {chosen_date.strftime("%d.%m.%Y")}'
     }
     
     new_entry_df = pd.DataFrame([new_entry])

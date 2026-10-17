@@ -30,7 +30,6 @@ config = configparser.ConfigParser()
 TOKEN = ""
 ADMIN_IDS = []
 GROUP_ID = ""
-STATUS_FILE = ""
 BANLIST = []
 ENVIRONMENT = "production"
 SERVICE_ACCOUNT_KEY_PATH = ""
@@ -57,13 +56,14 @@ CREDS = None
 queue_df = None
 
 DAILY_SHEETS_CACHE_DIR = "daily_sheets_cache"
+TODO_BOT_CACHE_FILE = "todo_bot_cache.csv"
 
 JOIN_GETTING_ID, JOIN_GETTING_DATE = range(2)
 CANCEL_GETTING_ID = range(2, 3)
 SHOW_GETTING_OPTION, SHOW_GETTING_DATE = range(3, 5)
 STATUS_GETTING_ID = range(5, 6)
 
-REQUIRED_COLUMNS = ['ID', 'Дата', 'Примітки', 'Статус', 'Змінено', 'Попередня дата', 'TG ID', 'TG Name', 'TG Full Name']
+REQUIRED_COLUMNS = ['ID', 'Дата', 'Примітки', 'Статус', 'Змінено', 'Попередня дата', 'TG ID', 'TG Name', 'TG Full Name', 'Підтвердження']
 days_ahead = 15
 
 STATS_CACHE_TTL_MINUTES = 30
@@ -77,7 +77,7 @@ def save_config():
 
 def initialize_bot():
     """Ініціалізує бота: завантажує конфігурацію та підключається до Google Sheets."""
-    global TOKEN, ADMIN_IDS, GROUP_ID, STATUS_FILE, BANLIST, ENVIRONMENT
+    global TOKEN, ADMIN_IDS, GROUP_ID, BANLIST, ENVIRONMENT
     global SERVICE_ACCOUNT_KEY_PATH, SPREADSHEET_ID, SHEET_NAME
     global STATS_SHEET_ID, STATS_WORKSHEET_NAME
     global ACTIVE_SHEET_ID, ACTIVE_WORKSHEET_NAME
@@ -95,7 +95,6 @@ def initialize_bot():
         admin_ids_str = config['BOT_SETTINGS']['ADMIN_IDS']
         ADMIN_IDS = [int(id_str.strip()) for id_str in admin_ids_str.split(',') if id_str.strip()]
         GROUP_ID = config['BOT_SETTINGS']['GROUP_ID']
-        STATUS_FILE = config['BOT_SETTINGS']['STATUS_FILE']
         ban_ids_str = config['BOT_SETTINGS']['BANLIST']
         BANLIST = [int(id_str.strip()) for id_str in ban_ids_str.split(',') if id_str.strip()]    
 

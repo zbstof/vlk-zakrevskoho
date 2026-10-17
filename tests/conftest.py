@@ -1,17 +1,33 @@
-"""
-Спільні фікстури для тестів.
-"""
+"""Спільні фікстури для тестів."""
 
-import pytest
-import pandas as pd
-import datetime
-import os
-import tempfile
 import json
-from unittest.mock import MagicMock, AsyncMock, patch
+import os
+
+import pandas as pd
+import pytest
+from unittest.mock import MagicMock, AsyncMock
 
 from telegram import Update, User, Message, Chat
 from telegram.ext import ContextTypes
+
+
+@pytest.fixture(autouse=True)
+def _isolate_filesystem(tmp_path, monkeypatch):
+    """Ізолює тести від реальної файлової системи."""
+    cache_dir = str(tmp_path / '_isolated_cache')
+    os.makedirs(cache_dir, exist_ok=True)
+
+    monkeypatch.setattr('vlk_bot.config.TODO_BOT_CACHE_FILE', str(tmp_path / 'todo_bot_cache.csv'))
+    monkeypatch.setattr('vlk_bot.config.DAILY_SHEETS_CACHE_DIR', cache_dir)
+    monkeypatch.setattr('vlk_bot.sync.DAILY_SHEETS_CACHE_DIR', cache_dir)
+    monkeypatch.setattr('vlk_bot.prediction.DAILY_SHEETS_CACHE_DIR', cache_dir)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_external_services(monkeypatch):
+    """Ізолює тести від зовнішніх сервісів (Google Sheets, Telegram)."""
+    monkeypatch.setattr('vlk_bot.config.SHEETS_SERVICE', None)
+    monkeypatch.setattr('vlk_bot.config.is_bot_in_group', False)
 
 
 @pytest.fixture
@@ -23,7 +39,7 @@ def mock_update():
     update.effective_user.username = "testuser"
     update.effective_user.full_name = "Test User"
     update.effective_user.mention_html.return_value = "<a href='tg://user?id=12345'>Test User</a>"
-    
+
     update.message = MagicMock(spec=Message)
     update.message.text = "some text"
     update.message.chat = MagicMock(spec=Chat)
@@ -134,15 +150,15 @@ def mock_sheets_service():
     service = MagicMock()
     spreadsheets = MagicMock()
     values = MagicMock()
-    
+
     service.spreadsheets.return_value = spreadsheets
     spreadsheets.values.return_value = values
-    
+
     values.get.return_value.execute.return_value = {'values': []}
     values.append.return_value.execute.return_value = {}
     values.update.return_value.execute.return_value = {}
     values.clear.return_value.execute.return_value = {}
-    
+
     return service
 
 
@@ -180,4 +196,3 @@ def mock_config():
             'ACTIVE_WORKSHEET_NAME': 'Active'
         }
     }
-

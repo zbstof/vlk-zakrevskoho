@@ -70,8 +70,6 @@ async def display_queue_data(update: Update, data_frame: pd.DataFrame,
     """
     Відображає чергу з пагінацією.
     """
-    from vlk_bot.utils import load_status_state
-    
     temp_df = data_frame.copy()
     temp_df['Змінено_dt'] = pd.to_datetime(temp_df['Змінено'].astype(str), 
                                             format="%d.%m.%Y %H:%M:%S", 
@@ -113,12 +111,11 @@ async def display_queue_data(update: Update, data_frame: pd.DataFrame,
 
     queue_lines = []
     if iConfirmation:
-        last_known_state = load_status_state()       
         for index, row in sorted_df_for_display.iterrows():
-            last_status_info = last_known_state.get(row['ID'])
+            confirmation = str(row.get('Підтвердження', '')).strip()
             queue_lines.append(
                 f"**{len(queue_lines) + 1}.** ID: `{row['ID']}`, "
-                f"Дата: `{row['Дата']}`, `{last_status_info['confirmation']}`"
+                f"Дата: `{row['Дата']}`, `{confirmation}`"
             )
     else:    
         for index, row in sorted_df_for_display.iterrows():
@@ -158,3 +155,38 @@ def get_poll_text(user_id: str, date: str) -> str:
         f"Будь ласка, підтвердіть свій візит або оберіть іншу дію:"
     )
 
+
+def get_status_notification_text(user_id: str, status: str, target_date: str, prev_date: str, note: str) -> str:
+    """Форматує текст повідомлення про зміну статусу."""
+    if status == 'На розгляді':
+        return ""
+        
+    if target_date != '':
+        to_date = f" на <code>{target_date}</code>"
+        rmc = 'перенесення' if prev_date != '' else 'створення'
+    else:
+        rmc = 'скасування'
+        to_date = ""
+        
+    emo = '🟢' if status == 'Ухвалено' else '🔴'
+    notification = f"{emo} Заявку на {rmc} запису ID <code>{user_id}</code> {to_date}\n<code>{status}</code>"
+    if note != '':
+        notification += f'\nПримітка: <code>{note}</code>'
+    return notification
+
+
+def get_reminder_notification_text(user_id: str, target_date: str, nr_days: str, note: str) -> str:
+    """Форматує текст нагадування про візит."""
+    notification = f"❗️<code>Нагадування!</code>\n  Для вашого номеру <code>{user_id}</code> призначено візит {nr_days}: <code>{target_date}</code>"
+    if note != '':
+        notification += f'\nПримітка: <code>{note}</code>'
+    return notification
+
+
+def get_poll_expire_text(user_id: str, date: str) -> str:
+    """Форматує текст про завершення опитування."""
+    return (
+        f"Час на відповідь на опитування щодо візиту на <code>{date}</code> "
+        f"для номеру <code>{user_id}</code> минув.\n\n"
+        f"Якщо ви плануєте прийти - просто приходьте за розкладом."
+    )
