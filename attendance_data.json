@@ -13719,7 +13719,12 @@
       "date": "2026-10-30",
       "id": "8261",
       "is_live": false
+    },
+    {
+      "date": "2026-11-03",
+      "id": "8265",
+      "is_live": false
     }
   ],
-  "total_points": 2744
+  "total_points": 2745
 }
